@@ -1,0 +1,13 @@
+{
+  "slug": "vocab-confusion-log",
+  "title": "Vocab Confusion Log",
+  "territory": "utilities",
+  "user": "Language learners who repeatedly confuse near-neighbor words or spellings and need a short contrast-and-production repair, not another generic review interval.",
+  "recurrence": "Users report that a single card mode does not repair a durable vocabulary failure; a second retrieval modality is needed without duplicating a whole deck.",
+  "current_workaround": "Press Again repeatedly, make duplicate cards/decks, attach mnemonic notes, or drill an entire vocabulary list again.",
+  "smallest_useful_product": "Local PWA to log one confused pair, attach text/audio/own mnemonic, rotate text-to-audio and audio-to-text retries, and export resolved pairs as CSV.",
+  "success_measure": "Users resolve 50% of logged pairs (three clean delayed attempts) within 21 days, with fewer than one new duplicate deck per active user.",
+  "artifact_class": "pwa-offline",
+  "monetization": "one-time",
+  "constraints": "Local recordings by default; teacher/imported audio needs rights; no unsupported claim of language proficiency measurement."
+}
