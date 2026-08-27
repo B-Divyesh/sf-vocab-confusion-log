@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Two overlapping word cards with a repair arrow">
+  <rect width="512" height="512" rx="96" fill="#f3e8cf"/>
+  <path fill="#175e8e" d="M94 114h250v186H94z" transform="rotate(-6 219 207)"/>
+  <path fill="#fff9eb" stroke="#172c3a" stroke-width="18" d="M166 190h252v188H166z" transform="rotate(5 292 284)"/>
+  <path fill="none" stroke="#b83a32" stroke-linecap="round" stroke-linejoin="round" stroke-width="24" d="M137 375c-48-47-55-118-18-171m-15 24 15-24 25 13"/>
+  <circle cx="346" cy="285" r="30" fill="#d6a526"/>
+</svg>
