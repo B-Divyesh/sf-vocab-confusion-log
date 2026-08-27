@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://vocab-confusion-log.sociobot.in/sitemap.xml

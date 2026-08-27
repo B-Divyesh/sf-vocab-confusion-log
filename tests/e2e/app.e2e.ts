@@ -35,6 +35,22 @@ test('has no serious accessibility violations on the empty desk', async ({ page 
   expect(serious).toEqual([]);
 });
 
+test('captures an own-voice reference and persists it with the pair', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Log a confusion' }).first().click();
+  await page.getByLabel('Word A *').fill('ship');
+  await page.getByLabel('Word B *').fill('sheep');
+  await page.getByLabel('Contrast cue *').fill('Ship is shorter; sheep holds the long vowel.');
+  await page.getByRole('button', { name: 'Record', exact: true }).first().click();
+  await expect(page.getByText('Recording now…')).toBeVisible();
+  await page.getByRole('button', { name: 'Stop recording' }).click();
+  await expect(page.getByText(/Recording saved locally/)).toBeVisible();
+  await page.getByRole('button', { name: 'Add to repair desk' }).click();
+  await page.getByRole('link', { name: 'Pairs', exact: true }).click();
+  await page.getByRole('button', { name: 'Edit pair' }).click();
+  await expect(page.getByRole('dialog').locator('audio')).toHaveCount(1);
+});
+
 test('reloads the installed shell while offline', async ({ page, context }) => {
   await page.goto('/');
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();

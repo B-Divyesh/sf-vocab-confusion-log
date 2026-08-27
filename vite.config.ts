@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { defineConfig } from 'vite';
@@ -18,8 +19,7 @@ export default defineConfig({
     name: 'versioned-service-worker',
     generateBundle(_options, bundle) {
       const generated: string[] = [];
-      const appChunk = Object.values(bundle).find((entry) => entry.type === 'chunk' && entry.name === 'app');
-      const buildVersion = appChunk?.fileName.replace(/[^a-zA-Z0-9]/g, '-') ?? 'fallback';
+      const buildVersion = createHash('sha256').update(Object.keys(bundle).sort().join('|')).digest('hex').slice(0, 12);
       const shell = [
         '/', '/index.html', '/privacy/', '/terms/', '/offline.html',
         '/manifest.webmanifest', '/assets/repair-collage.webp',

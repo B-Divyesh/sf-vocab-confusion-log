@@ -54,6 +54,7 @@ const state: AppState = {
 };
 
 let draftAudio: { a?: Blob; b?: Blob } = {};
+let draftFields: { wordA: string; wordB: string; contrast: string; mnemonic: string; language: string } | undefined;
 let removedAudio = new Set<WordSide>();
 let activeRecorder: { recorder: MediaRecorder; stream: MediaStream; side: WordSide } | null = null;
 const audioUrls = new WeakMap<Blob, string>();
@@ -121,7 +122,7 @@ function render(): void {
         ${navLink('desk', 'Desk')}
         ${navLink('practice', 'Practice', due)}
         ${navLink('pairs', 'Pairs')}
-        ${navLink('data', isPro() ? 'Data · Pro' : 'Data · Unlock')}
+        ${navLink('data', isPro() ? 'Data · Pro' : 'Data')}
       </nav>
     </header>
     ${!state.online ? '<div class="offline-strip" role="status"><span aria-hidden="true">●</span> Offline — logging, recordings, and practice still work here.</div>' : ''}
@@ -381,20 +382,27 @@ function renderData(): string {
 function renderDialog(): string {
   if (!state.dialogOpen) return '';
   const editing = state.editingId ? state.pairs.find((pair) => pair.id === state.editingId) : undefined;
+  const fields = draftFields ?? {
+    wordA: editing?.wordA ?? '',
+    wordB: editing?.wordB ?? '',
+    contrast: editing?.contrast ?? '',
+    mnemonic: editing?.mnemonic ?? '',
+    language: editing?.language ?? ''
+  };
   return `
     <dialog id="pair-dialog" aria-labelledby="dialog-title">
       <form class="pair-form" data-pair-form>
         <div class="dialog-heading"><div><p class="eyebrow">One mix-up, clearly caught</p><h2 id="dialog-title">${editing ? 'Edit this confusion' : 'Log a confusion'}</h2></div><button class="icon-button" type="button" data-close-dialog aria-label="Close without saving">×</button></div>
         <p class="form-intro">Both words matter. Add the shortest contrast that would have helped in the moment.</p>
         <div class="word-fields">
-          <div class="field"><label for="word-a">Word A <span aria-hidden="true">*</span></label><span class="field-help" id="word-a-help">The word you reached for</span><input id="word-a" name="wordA" value="${escapeHtml(editing?.wordA)}" aria-describedby="word-a-help" required maxlength="80" autocomplete="off" /></div>
+          <div class="field"><label for="word-a">Word A <span aria-hidden="true">*</span></label><span class="field-help" id="word-a-help">The word you reached for</span><input id="word-a" name="wordA" value="${escapeHtml(fields.wordA)}" aria-describedby="word-a-help" required maxlength="80" autocomplete="off" /></div>
           <div class="not-equal" aria-hidden="true">≠</div>
-          <div class="field"><label for="word-b">Word B <span aria-hidden="true">*</span></label><span class="field-help" id="word-b-help">The word you meant</span><input id="word-b" name="wordB" value="${escapeHtml(editing?.wordB)}" aria-describedby="word-b-help" required maxlength="80" autocomplete="off" /></div>
+          <div class="field"><label for="word-b">Word B <span aria-hidden="true">*</span></label><span class="field-help" id="word-b-help">The word you meant</span><input id="word-b" name="wordB" value="${escapeHtml(fields.wordB)}" aria-describedby="word-b-help" required maxlength="80" autocomplete="off" /></div>
         </div>
-        <div class="field"><label for="contrast">Contrast cue <span aria-hidden="true">*</span></label><span class="field-help" id="contrast-help">One plain sentence: when does each word belong?</span><textarea id="contrast" name="contrast" aria-describedby="contrast-help" required maxlength="300" rows="3">${escapeHtml(editing?.contrast)}</textarea></div>
+        <div class="field"><label for="contrast">Contrast cue <span aria-hidden="true">*</span></label><span class="field-help" id="contrast-help">One plain sentence: when does each word belong?</span><textarea id="contrast" name="contrast" aria-describedby="contrast-help" required maxlength="300" rows="3">${escapeHtml(fields.contrast)}</textarea></div>
         <div class="split-fields">
-          <div class="field"><label for="mnemonic">Your mnemonic <span class="optional">Optional</span></label><input id="mnemonic" name="mnemonic" value="${escapeHtml(editing?.mnemonic)}" maxlength="160" /></div>
-          <div class="field"><label for="language">Language <span class="optional">Optional</span></label><input id="language" name="language" value="${escapeHtml(editing?.language)}" maxlength="50" placeholder="e.g. English" /></div>
+          <div class="field"><label for="mnemonic">Your mnemonic <span class="optional">Optional</span></label><input id="mnemonic" name="mnemonic" value="${escapeHtml(fields.mnemonic)}" maxlength="160" /></div>
+          <div class="field"><label for="language">Language <span class="optional">Optional</span></label><input id="language" name="language" value="${escapeHtml(fields.language)}" maxlength="50" placeholder="e.g. English" /></div>
         </div>
         <fieldset class="recording-fieldset"><legend>My reference recordings <span class="optional">Optional</span></legend><p>Record your own voice. Audio stays in this browser and is never speech-scored or uploaded.</p>
           <div class="recording-grid">${recordingControl('a', 'Word A', editing?.audioA)}${recordingControl('b', 'Word B', editing?.audioB)}</div>
@@ -443,6 +451,7 @@ function openAddDialog(): void {
     return;
   }
   draftAudio = {};
+  draftFields = undefined;
   removedAudio = new Set();
   state.editingId = undefined;
   state.dialogOpen = true;
@@ -451,6 +460,7 @@ function openAddDialog(): void {
 
 function openEditDialog(id: string): void {
   draftAudio = {};
+  draftFields = undefined;
   removedAudio = new Set();
   state.editingId = id;
   state.dialogOpen = true;
@@ -466,6 +476,7 @@ function closeDialog(): void {
   state.dialogOpen = false;
   state.editingId = undefined;
   draftAudio = {};
+  draftFields = undefined;
   removedAudio = new Set();
   render();
 }
@@ -511,6 +522,7 @@ async function submitPair(event: SubmitEvent): Promise<void> {
     state.dialogOpen = false;
     state.editingId = undefined;
     draftAudio = {};
+    draftFields = undefined;
     removedAudio = new Set();
     state.notice = editing ? 'Pair updated on this device.' : 'Confusion logged. Its first route is ready now.';
     await loadData(false);
@@ -553,6 +565,7 @@ async function toggleRecording(side: WordSide): Promise<void> {
     const recorder = new MediaRecorder(stream);
     recorder.ondataavailable = (event) => { if (event.data.size) chunks.push(event.data); };
     recorder.onstop = () => {
+      captureDraftFields();
       const blob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' });
       draftAudio[side] = blob;
       removedAudio.delete(side);
@@ -572,9 +585,23 @@ async function toggleRecording(side: WordSide): Promise<void> {
 }
 
 function removeRecording(side: WordSide): void {
+  captureDraftFields();
   delete draftAudio[side];
   removedAudio.add(side);
   render();
+}
+
+function captureDraftFields(): void {
+  const form = app.querySelector<HTMLFormElement>('[data-pair-form]');
+  if (!form) return;
+  const data = new FormData(form);
+  draftFields = {
+    wordA: String(data.get('wordA') ?? ''),
+    wordB: String(data.get('wordB') ?? ''),
+    contrast: String(data.get('contrast') ?? ''),
+    mnemonic: String(data.get('mnemonic') ?? ''),
+    language: String(data.get('language') ?? '')
+  };
 }
 
 async function playPracticeAudio(): Promise<void> {

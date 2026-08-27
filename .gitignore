@@ -5,4 +5,5 @@ dist/
 graphify-out/
 playwright-report/
 test-results/
+.factory/evidence/
 .DS_Store
