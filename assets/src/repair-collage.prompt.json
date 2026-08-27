@@ -1,0 +1,9 @@
+{
+  "tool": "/opt/fleet/lib/gen-image.sh",
+  "deployment": "factory-image",
+  "date": "2026-08-27",
+  "size": "1536x1024",
+  "quality": "high",
+  "prompt": "Use case: illustration-story. Asset type: PWA hero and empty-state editorial illustration. Primary request: an original tactile risograph collage about repairing confusion between two vocabulary words. Scene/backdrop: warm oat recycled paper with generous quiet outer margin. Subject: two overlapping blank torn index-card scraps, one abstract listening ear, one simple speaking mouth cut-paper silhouette, and a looping graphite correction arrow connecting the cards. Style/medium: flat scanned editorial paper collage, soy risograph ink, coarse halftone dots, slight two-color misregistration, handmade cut edges. Composition/framing: landscape 3:2, compact objects centered with breathing room, readable at small size. Lighting/mood: flat print scan, encouraging and practical. Color palette: deep navy, tomato red, muted mustard, restrained cornflower blue on oat paper. Constraints: all cards blank; no text, no letters, no watermark, no logos, no brands, no people, no hands, no flags, no app interface, no photorealism, no 3D, no gradients, no neon.",
+  "review": "Accepted: clean blank cards, recognizable ear/mouth/repair loop, no text or logos, no malformed anatomy, palette consistent with visual thesis."
+}
