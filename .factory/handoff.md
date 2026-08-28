@@ -1,46 +1,54 @@
-# Vocab Confusion Log — build handoff
+# Vocab Confusion Log — repair handoff
 
-> Independent verification status (2026-08-28): **FAIL — deployment-only.** Commit `00c97192f469c4ffe39087e9c4121e92a702afb5` builds and functions end to end, and the live application at <https://vocab-confusion-log.sociobot.in> is byte-identical to its built HTML/JS/CSS. Release is blocked because the live host serves fingerprinted static assets with `cache-control: public, must-revalidate, max-age=30`, which fails the required long-lived immutable-cache policy. See [.factory/verification.md](verification.md) for exact tests, hashes, and response evidence. No product code was modified by the verifier.
+- Work order: `vocab-confusion-log-repair-1`
+- Repair deployment: <https://vocab-confusion-log.sociobot.in>
+- Deployed artifact commit: `b5789a59e43fbd918a3a1b8245b2a7f0a0f47c35`
+- Repair commits: `415b2e7d6ea7d5b5bfe5e34d99fd00978debdb65` and `b5789a59e43fbd918a3a1b8245b2a7f0a0f47c35`
+- Status: **release-blocking P2 repaired and deployed**
 
-- Work order: `vocab-confusion-log-build-1`
-- Completed: 2026-08-27
-- Deploy type: static; output root: `dist/`
+## What changed
 
-## What was built
-
-- A complete local-first confusion log backed by IndexedDB. Learners can add, edit, search, and delete paired words; attach a contrast cue, mnemonic, language, and optional own-voice recordings; and inspect full attempt history.
-- A focused repair loop that alternates text → audio and audio → text when both recordings exist. It schedules clean returns after one and three days, resolves on the third clean due attempt, and brings misses back after ten minutes.
-- Honest audio handling: recordings are made only after an explicit microphone action, remain local, can be replayed/removed, and are never scored or uploaded.
-- JSON backup/restore including recordings, plus CSV export of resolved pairs. These data-ownership features are not paywalled.
-- A useful free tier (eight active pairs; resolved pairs do not count) and a US$9 one-time Pro unlock for unlimited active pairs. Checkout and verification use the Sociobot contract, returned tokens are stripped from the URL, verdicts are cached, offline access is optimistic from a valid cache, and licenses can be pasted to restore. `VITE_BILLING_BASE_URL` can override the production default without changing code.
-- An installable PWA with generated 192/512/maskable icons, a versioned app-shell cache, network-first navigation, cache-first local assets, an offline fallback, and an in-app update prompt.
-- `/privacy/` and `/terms/`, MIT licensing, robots/sitemap files, and a complete README.
-- A product-specific tactile risograph system. The generated illustration source, prompt, review note, and optimized 108 KB WebP are retained with provenance in `.factory/design.md` and `assets/src/`.
+- Added source-controlled Azure Static Web Apps configuration at `public/staticwebapp.config.json`. It ships to `dist/` and gives fingerprinted `/assets/*` files `Cache-Control: public, max-age=31536000, immutable`. Icons receive the same long-lived policy.
+- Kept update discovery safe: `/` and `/index.html` are `no-cache, must-revalidate`; `/sw.js` is `no-cache, no-store, must-revalidate`.
+- Added a restrictive static response policy: self-only CSP with the documented Sociobot billing API as the sole external connection, microphone-only Permissions-Policy, frame denial, referrer policy, and MIME sniffing protection. This closes the verifier’s CSP/Permissions-Policy/frame-protection P3 follow-up that can be controlled by this product.
+- Added three exact unit regressions for immutable asset caching, update-entry caching, and response-policy restrictions.
+- During live keyboard verification, found that the existing skip link did not move focus to `main`. Added a tiny self-hosted skip-link helper for the app and legal pages, focusable main landmarks in every render state, and a desktop/mobile Playwright regression. No learner workflow changed.
 
 ## Verification
 
-Run from a clean checkout with Node.js 20+:
+From a clean dependency install with Node 22.23.2:
 
 ```sh
 npm ci
 npm test
 npm run build
 npm run test:e2e
+npm audit --omit=dev
 ```
 
-Results on 2026-08-27:
+- `npm ci`: 59 packages installed; audit found zero vulnerabilities.
+- `npm test`: 10/10 passed (7 product-model tests plus 3 deployment-policy regressions).
+- `npm run build`: passed TypeScript (`tsc --noEmit`) and Vite, producing `dist/index.html`. There is no separate lint script; TypeScript checking is part of the build.
+- Production assets: application JS 36.71 KB (11.94 KB gzip), shared skip-link JS 0.95 KB (0.54 KB gzip), CSS 21.64 KB (5.46 KB gzip), hero WebP 107.46 KB. Initial JS/CSS remain within the static-PWA budgets.
+- `npm run test:e2e`: 14/14 passed across desktop Chromium and 390 × 844 mobile. It covers add/practice, local microphone recording, direct legal routes, axe smoke, no mobile overflow, actual offline reload, and keyboard skip-link focus.
+- `npm audit --omit=dev`: zero known vulnerabilities. This is a private application rather than a published package, so no package-consumer test applies.
+- Live Lighthouse 12.8.2: Performance 99, Accessibility 100, Best Practices 100, SEO 100; LCP 1,653 ms, CLS 0, TBT 68 ms.
 
-- `npm test`: 7/7 Vitest checks passed.
-- `npm run build`: passed; generated `dist/index.html`. Initial assets: 37.37 KB JS (12.21 KB gzip), 21.64 KB CSS (5.46 KB gzip), 107.46 KB hero WebP. No runtime fonts.
-- `npm run test:e2e`: 12/12 Playwright checks passed across desktop Chromium and a 390 × 844 mobile viewport. Coverage includes add/practice, fake-device microphone capture and persistence, axe scan, no horizontal overflow, direct legal routes, and an actual offline reload.
-- Factory `verify-url.sh`: HTTP 200, zero console/page errors, title and `lang` present, exactly one `h1`, main landmark present, no missing image alt text, no unlabeled buttons; measured load 558 ms locally.
-- Lighthouse 12.8.2 mobile profile: Performance 99, Accessibility 100, Best Practices 100, SEO 100; LCP 2.0 s, CLS 0, Total Blocking Time 50 ms, Speed Index 0.9 s.
-- `npm audit`: zero known vulnerabilities.
+## Live release evidence
 
-## Known gaps and release notes
+- Factory `verify-url.sh` against the custom domain: HTTP 200, 615 ms load, no console/page errors, title and `lang` present, exactly one `h1`, main landmark, no missing image alt text, and no unlabeled buttons.
+- Live desktop and 390 px browser smoke: no console/page errors, no horizontal overflow, zero axe serious/critical findings, and zero external requests during ordinary use. Keyboard checks confirm the app, privacy page, and terms page skip links all focus `main`.
+- Live service-worker check: after activation, an offline reload displays the cached app shell and offline status.
+- Current live hashed JS and CSS return `cache-control: public, max-age=31536000, immutable`; `/sw.js` returns `no-cache, no-store, must-revalidate`; `/` returns `no-cache, must-revalidate`.
+- Current live JS also returns the CSP, `Permissions-Policy: microphone=(self)`, and `X-Frame-Options: DENY` configured in the repository.
+- Identity checks matched live bytes to the deployed build:
 
-- The factory still needs to register the production billing product and ensure its configured price is US$9 before release. The code intentionally contains no provider product ID; it uses the required product slug endpoint.
-- MediaRecorder output format is browser-selected. Current Chromium, Firefox, and Safari releases support the path, while browsers without MediaRecorder fall back cleanly to text → audio self-assessment.
-- The one-day and three-day waits are covered by deterministic unit tests; the browser suite tests the first scheduled attempt rather than waiting real days.
-- Imported/teacher audio is intentionally not offered in v1 because rights cannot be established locally. Learners can record their own references.
-- Lighthouse was run against the local production preview; CDN/edge configuration is owned by deployment and should be rechecked after release.
+| File | SHA-256 |
+| --- | --- |
+| `index.html` | `a7aed30d033ac568bb60c76b5a31cd87e7445849afe9ba8141a68bdfb4c81eb4` |
+| `assets/app-BTFRWLIb.js` | `c0e223c9267fbad97247bcc01749584af1ecba4e0d0b908e7f14e00a9e8047a8` |
+| `assets/skip-link-DAzFukb-.css` | `798e7c9cb261b8f8911e0313324c6a51fd50e05c8326e9afa75964c8eafca07e` |
+
+## Remaining follow-up
+
+The verifier’s non-blocking HSTS observation remains platform-owned: Azure Static Web Apps currently sends `Strict-Transport-Security: max-age=10886400; includeSubDomains; preload`, whose `max-age` is shorter than the preload requirement. Static response configuration cannot alter that managed header. The release-blocking immutable cache defect is fixed; the factory platform should either raise the HSTS duration to one year or remove `preload` in its edge configuration.
