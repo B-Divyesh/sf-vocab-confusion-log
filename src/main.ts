@@ -1,4 +1,5 @@
 import './style.css';
+import { activateSkipLink } from './skip-link';
 import { deletePair, getAttempts, getPairs, importBackup, makeBackup, saveAttemptAndPair, savePair } from './db';
 import { applyGrade, formatRelativeDue, FREE_ACTIVE_LIMIT, nextMode, normalizeAnswer, resolvedCsv, samePair } from './model';
 import {
@@ -40,6 +41,7 @@ interface AppState {
 
 const app = document.querySelector<HTMLDivElement>('#app')!;
 if (!app) throw new Error('The app mount point is missing.');
+activateSkipLink();
 
 const state: AppState = {
   loading: true,
@@ -102,11 +104,11 @@ function navLink(view: View, label: string, count?: number): string {
 
 function render(): void {
   if (state.loading) {
-    app.innerHTML = `<main class="loading-page" id="main-content"><div class="loading-mark" aria-hidden="true"></div><p>Opening your local repair desk…</p></main>`;
+    app.innerHTML = `<main class="loading-page" id="main-content" tabindex="-1"><div class="loading-mark" aria-hidden="true"></div><p>Opening your local repair desk…</p></main>`;
     return;
   }
   if (state.error) {
-    app.innerHTML = `<main class="error-page" id="main-content"><p class="eyebrow">Local storage error</p><h1>Your repair desk could not open.</h1><p>${escapeHtml(state.error)}</p><button class="button primary" data-retry>Try again</button></main>`;
+    app.innerHTML = `<main class="error-page" id="main-content" tabindex="-1"><p class="eyebrow">Local storage error</p><h1>Your repair desk could not open.</h1><p>${escapeHtml(state.error)}</p><button class="button primary" data-retry>Try again</button></main>`;
     app.querySelector('[data-retry]')?.addEventListener('click', () => void loadData());
     return;
   }

@@ -35,6 +35,14 @@ test('has no serious accessibility violations on the empty desk', async ({ page 
   expect(serious).toEqual([]);
 });
 
+test('moves keyboard focus to the main landmark from the skip link', async ({ page }) => {
+  await page.goto('/');
+  await page.keyboard.press('Tab');
+  await expect(page.getByRole('link', { name: 'Skip to main content' })).toBeVisible();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#main-content')).toBeFocused();
+});
+
 test('captures an own-voice reference and persists it with the pair', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Log a confusion' }).first().click();
