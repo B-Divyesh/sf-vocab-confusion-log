@@ -1,5 +1,7 @@
 # Vocab Confusion Log — build handoff
 
+> Independent verification status (2026-08-28): **FAIL — deployment-only.** Commit `00c97192f469c4ffe39087e9c4121e92a702afb5` builds and functions end to end, and the live application at <https://vocab-confusion-log.sociobot.in> is byte-identical to its built HTML/JS/CSS. Release is blocked because the live host serves fingerprinted static assets with `cache-control: public, must-revalidate, max-age=30`, which fails the required long-lived immutable-cache policy. See [.factory/verification.md](verification.md) for exact tests, hashes, and response evidence. No product code was modified by the verifier.
+
 - Work order: `vocab-confusion-log-build-1`
 - Completed: 2026-08-27
 - Deploy type: static; output root: `dist/`
