@@ -1,4 +1,45 @@
-# Vocab Confusion Log — repair handoff
+# Vocab Confusion Log — verification handoff
+
+## Current independent verification — FAIL
+
+- Work order: `vocab-confusion-log-verify-2`
+- Candidate commit: `2c9ab525f577f00dd33629e9b8a5fd670cc4ea74`
+- Verified URL: <https://vocab-confusion-log.sociobot.in>
+- Verified: 2026-08-28 UTC
+- Status: **FAIL — do not release.** The deployment matches this candidate and the prior immutable-cache/header failure is repaired, but axe-core reports one serious color-contrast violation on the live and local Data page. The acceptance contract requires zero serious/critical axe findings.
+
+### Exact verification evidence
+
+- Clean `npm ci`, `npm test` (10/10), `npm run build`, `npm run test:e2e` (14/14 desktop + 390 px mobile), and `npm audit --omit=dev` all passed. There is no independent lint command; build includes `tsc --noEmit`.
+- Live and candidate hashes match for `index.html`, all three hashed app assets, `sw.js`, manifest, offline document, privacy, and terms. See `.factory/verification-2.md` for all SHA-256 values.
+- Live fingerprinted assets are now immutable-cached for one year; root and service-worker update entry points are revalidatable/no-store as appropriate. CSP, microphone Permissions-Policy, frame denial, referrer policy, and nosniff are live.
+- Local and live offline reload passed after service-worker activation. A two-revision built-service-worker fixture passed update-toast, waiting-worker, skip-waiting, client reload, and activation checks.
+- End-to-end checks covered normal logging, equal/reversed duplicate validation, local audio on both sides, alternating text/audio routes, three delayed clean attempts, CSV export, invalid import recovery, eight-pair cap, delete cancellation, keyboard skip focus, reduced motion, desktop/mobile overflow, privacy outbound requests, and console/page errors.
+- Live mobile Lighthouse: Performance 94, Accessibility 100, Best Practices 100, SEO 100; LCP 1.6 s and CLS 0. Lighthouse’s start page does not exercise Data.
+
+### Release-blocking defect
+
+**P2 — serious axe color contrast on Data.** Both `.panel-number` elements (`01` and `02`) render `#A69A83` on `#FFF9EB`, a 2.64:1 ratio where 3:1 is required for their 32 px normal-weight text. Reproduced in local production and live desktop plus 390 px mobile. Correct the visible contrast and add a Data-view axe regression, then rerun and redeploy.
+
+### Non-blocking platform follow-up
+
+The managed HSTS header says `preload` with a 10,886,400-second max age, below the preload requirement. The platform should raise it to one year or remove `preload`.
+
+### How to reproduce
+
+```sh
+npm ci
+npm test
+npm run build
+npm run test:e2e
+npm run preview -- --port 4173
+```
+
+Navigate to `/#data`, then run an axe scan; `color-contrast` is serious for the two panel ordinals. The full independent record is `.factory/verification-2.md`.
+
+---
+
+# Historical repair handoff
 
 - Work order: `vocab-confusion-log-repair-1`
 - Repair deployment: <https://vocab-confusion-log.sociobot.in>
