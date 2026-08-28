@@ -383,7 +383,7 @@ input::placeholder { color: #6b6e6b; opacity: 1; }
 .data-panel { position: relative; padding: 32px; border: 2px solid var(--ink); background: var(--sheet); box-shadow: 5px 5px 0 var(--blue); }
 .data-panel:nth-child(2) { box-shadow: 5px 5px 0 var(--tomato); }
 .data-panel h2 { font-size: 2.1rem; }
-.panel-number { position: absolute; top: 12px; right: 18px; color: var(--line); font-family: var(--display); font-size: 2rem; }
+.panel-number { position: absolute; top: 12px; right: 18px; color: var(--muted); font-family: var(--display); font-size: 2rem; }
 .button-stack { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 24px; }
 .file-button { position: relative; margin-top: 16px; overflow: hidden; }
 .file-button input { position: absolute; width: 1px; height: 1px; opacity: 0; }

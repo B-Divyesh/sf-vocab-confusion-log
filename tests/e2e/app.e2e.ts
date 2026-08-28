@@ -35,6 +35,18 @@ test('has no serious accessibility violations on the empty desk', async ({ page 
   expect(serious).toEqual([]);
 });
 
+test('has no serious accessibility violations on the Data page', async ({ page }) => {
+  await page.goto('/#data');
+  await expect(page.getByRole('heading', { name: 'Own the work you put in.' })).toBeVisible();
+  await page.addScriptTag({ content: axeCore.source });
+  const results = await page.evaluate(async () => {
+    const axe = (window as typeof window & { axe: { run: () => Promise<{ violations: Array<{ impact: string | null; id: string }> }> } }).axe;
+    return axe.run();
+  });
+  const serious = results.violations.filter((violation) => violation.impact === 'serious' || violation.impact === 'critical');
+  expect(serious).toEqual([]);
+});
+
 test('moves keyboard focus to the main landmark from the skip link', async ({ page }) => {
   await page.goto('/');
   await page.keyboard.press('Tab');
