@@ -1,63 +1,24 @@
-# Vocab Confusion Log — verification handoff
+# Vocab Confusion Log — repair handoff
 
-## Current independent verification — FAIL
-
-- Work order: `vocab-confusion-log-verify-2`
-- Candidate commit: `2c9ab525f577f00dd33629e9b8a5fd670cc4ea74`
-- Verified URL: <https://vocab-confusion-log.sociobot.in>
+- Work order: `vocab-confusion-log-repair-2`
+- Base / failed candidate: `763199e18b7812cb43bdc0ebf1531c752d107298` / `2c9ab525f577f00dd33629e9b8a5fd670cc4ea74`
+- Repair commit: `34e5b50731060aced11ef9836526081dd485c23b`
+- Deployment: <https://vocab-confusion-log.sociobot.in>
+- Azure Static Web Apps deployment ID: `5efdefa7-66c4-4d3e-95ec-bb4180f567ca`
 - Verified: 2026-08-28 UTC
-- Status: **FAIL — do not release.** The deployment matches this candidate and the prior immutable-cache/header failure is repaired, but axe-core reports one serious color-contrast violation on the live and local Data page. The acceptance contract requires zero serious/critical axe findings.
-
-### Exact verification evidence
-
-- Clean `npm ci`, `npm test` (10/10), `npm run build`, `npm run test:e2e` (14/14 desktop + 390 px mobile), and `npm audit --omit=dev` all passed. There is no independent lint command; build includes `tsc --noEmit`.
-- Live and candidate hashes match for `index.html`, all three hashed app assets, `sw.js`, manifest, offline document, privacy, and terms. See `.factory/verification-2.md` for all SHA-256 values.
-- Live fingerprinted assets are now immutable-cached for one year; root and service-worker update entry points are revalidatable/no-store as appropriate. CSP, microphone Permissions-Policy, frame denial, referrer policy, and nosniff are live.
-- Local and live offline reload passed after service-worker activation. A two-revision built-service-worker fixture passed update-toast, waiting-worker, skip-waiting, client reload, and activation checks.
-- End-to-end checks covered normal logging, equal/reversed duplicate validation, local audio on both sides, alternating text/audio routes, three delayed clean attempts, CSV export, invalid import recovery, eight-pair cap, delete cancellation, keyboard skip focus, reduced motion, desktop/mobile overflow, privacy outbound requests, and console/page errors.
-- Live mobile Lighthouse: Performance 94, Accessibility 100, Best Practices 100, SEO 100; LCP 1.6 s and CLS 0. Lighthouse’s start page does not exercise Data.
-
-### Release-blocking defect
-
-**P2 — serious axe color contrast on Data.** Both `.panel-number` elements (`01` and `02`) render `#A69A83` on `#FFF9EB`, a 2.64:1 ratio where 3:1 is required for their 32 px normal-weight text. Reproduced in local production and live desktop plus 390 px mobile. Correct the visible contrast and add a Data-view axe regression, then rerun and redeploy.
-
-### Non-blocking platform follow-up
-
-The managed HSTS header says `preload` with a 10,886,400-second max age, below the preload requirement. The platform should raise it to one year or remove `preload`.
-
-### How to reproduce
-
-```sh
-npm ci
-npm test
-npm run build
-npm run test:e2e
-npm run preview -- --port 4173
-```
-
-Navigate to `/#data`, then run an axe scan; `color-contrast` is serious for the two panel ordinals. The full independent record is `.factory/verification-2.md`.
-
----
-
-# Historical repair handoff
-
-- Work order: `vocab-confusion-log-repair-1`
-- Repair deployment: <https://vocab-confusion-log.sociobot.in>
-- Deployed artifact commit: `b5789a59e43fbd918a3a1b8245b2a7f0a0f47c35`
-- Repair commits: `415b2e7d6ea7d5b5bfe5e34d99fd00978debdb65` and `b5789a59e43fbd918a3a1b8245b2a7f0a0f47c35`
-- Status: **release-blocking P2 repaired and deployed**
+- Status: **release-blocking P2 repaired, deployed, and live-verified.**
 
 ## What changed
 
-- Added source-controlled Azure Static Web Apps configuration at `public/staticwebapp.config.json`. It ships to `dist/` and gives fingerprinted `/assets/*` files `Cache-Control: public, max-age=31536000, immutable`. Icons receive the same long-lived policy.
-- Kept update discovery safe: `/` and `/index.html` are `no-cache, must-revalidate`; `/sw.js` is `no-cache, no-store, must-revalidate`.
-- Added a restrictive static response policy: self-only CSP with the documented Sociobot billing API as the sole external connection, microphone-only Permissions-Policy, frame denial, referrer policy, and MIME sniffing protection. This closes the verifier’s CSP/Permissions-Policy/frame-protection P3 follow-up that can be controlled by this product.
-- Added three exact unit regressions for immutable asset caching, update-entry caching, and response-policy restrictions.
-- During live keyboard verification, found that the existing skip link did not move focus to `main`. Added a tiny self-hosted skip-link helper for the app and legal pages, focusable main landmarks in every render state, and a desktop/mobile Playwright regression. No learner workflow changed.
+The independent verifier’s only release blocker was the visible `01` and `02` Data-page panel ordinals. They used the structural rule token (`#A69A83`) on `#FFF9EB`, which is 2.64:1 and failed axe’s serious color-contrast rule.
 
-## Verification
+- Changed `.panel-number` from `--line` to the existing secondary-copy `--muted` token (`#596168`). It renders at **6.00:1** on `--sheet` (`#FFF9EB`), preserving the repair-room risograph hierarchy while exceeding the 3:1 large-text/UI threshold.
+- Added an exact Playwright + axe regression for `/#data`. It waits for the Data heading and fails on any serious or critical axe violation. It runs in both the existing desktop Chromium and 390 × 844 mobile projects.
+- No researched-brief workflow, stored data schema, PWA behavior, visual direction, billing behavior, or previously passing functionality changed.
 
-From a clean dependency install with Node 22.23.2:
+## Clean verification
+
+Executed from a clean dependency install with Node 22.23.2:
 
 ```sh
 npm ci
@@ -67,29 +28,41 @@ npm run test:e2e
 npm audit --omit=dev
 ```
 
-- `npm ci`: 59 packages installed; audit found zero vulnerabilities.
-- `npm test`: 10/10 passed (7 product-model tests plus 3 deployment-policy regressions).
-- `npm run build`: passed TypeScript (`tsc --noEmit`) and Vite, producing `dist/index.html`. There is no separate lint script; TypeScript checking is part of the build.
-- Production assets: application JS 36.71 KB (11.94 KB gzip), shared skip-link JS 0.95 KB (0.54 KB gzip), CSS 21.64 KB (5.46 KB gzip), hero WebP 107.46 KB. Initial JS/CSS remain within the static-PWA budgets.
-- `npm run test:e2e`: 14/14 passed across desktop Chromium and 390 × 844 mobile. It covers add/practice, local microphone recording, direct legal routes, axe smoke, no mobile overflow, actual offline reload, and keyboard skip-link focus.
-- `npm audit --omit=dev`: zero known vulnerabilities. This is a private application rather than a published package, so no package-consumer test applies.
-- Live Lighthouse 12.8.2: Performance 99, Accessibility 100, Best Practices 100, SEO 100; LCP 1,653 ms, CLS 0, TBT 68 ms.
+- `npm ci`: passed; 59 packages installed; audit found zero vulnerabilities.
+- `npm test`: **10/10** passed (seven scheduling/model tests and three static response-policy tests).
+- `npm run build`: passed TypeScript (`tsc --noEmit`) and Vite, producing `dist/index.html`. There is no separate lint script; the build performs the declared type check.
+- `npm run test:e2e`: **16/16** passed across desktop Chromium and 390 × 844 mobile. The two new passing cases are the empty Desk and Data-page axe checks, each run in both projects. Existing browser coverage still exercises add/practice, own-voice capture, direct legal pages, keyboard skip focus, mobile overflow, and offline reload.
+- `npm audit --omit=dev`: zero known vulnerabilities. This is a private static application, not a published package, so no package-consumer check applies.
+- Production sizes: app JS 36,705 B (11,940 B gzip), shared JS 950 B (540 B gzip), CSS 21,642 B (5,450 B gzip), hero WebP 107,462 B. All are below the static-PWA budgets.
 
-## Live release evidence
+## Browser, accessibility, privacy, and PWA evidence
 
-- Factory `verify-url.sh` against the custom domain: HTTP 200, 615 ms load, no console/page errors, title and `lang` present, exactly one `h1`, main landmark, no missing image alt text, and no unlabeled buttons.
-- Live desktop and 390 px browser smoke: no console/page errors, no horizontal overflow, zero axe serious/critical findings, and zero external requests during ordinary use. Keyboard checks confirm the app, privacy page, and terms page skip links all focus `main`.
-- Live service-worker check: after activation, an offline reload displays the cached app shell and offline status.
-- Current live hashed JS and CSS return `cache-control: public, max-age=31536000, immutable`; `/sw.js` returns `no-cache, no-store, must-revalidate`; `/` returns `no-cache, must-revalidate`.
-- Current live JS also returns the CSP, `Permissions-Policy: microphone=(self)`, and `X-Frame-Options: DENY` configured in the repository.
-- Identity checks matched live bytes to the deployed build:
+- Factory `verify-url.sh` against the live custom domain: HTTP 200, 818 ms load, zero console/page errors, valid title/lang, exactly one h1, a main landmark, no missing image alts, and no unlabeled buttons.
+- A live axe scan of `/#data` returned **zero serious/critical violations** at both desktop and 390 px mobile. Its panel ordinals computed to `rgb(89, 97, 104)` on `rgb(255, 249, 235)` (the 6.00:1 repaired pairing). Both layouts had no horizontal overflow or console/page errors.
+- Live keyboard smoke: Tab then Enter on “Skip to main content” focuses `#main-content`.
+- Live offline smoke: after service-worker activation, `context.setOffline(true)` followed by reload still served the shell and its “Offline — logging, recordings, and practice still work here.” status.
+- Update smoke used the actual built app and service-worker source in a two-revision local static fixture. Revision two produced “A fresh version is ready,” had a waiting worker before action, and after “Update now” the waiting worker cleared while an activated worker controlled the reloaded page.
+- Ordinary-use live request capture on desktop and mobile contacted only `https://vocab-confusion-log.sociobot.in`; no analytics, trackers, CDNs, or third-party fonts/scripts were requested. Optional license verification remains the documented Sociobot API behavior only after a license exists.
+- Live Lighthouse 12.8.2 mobile: **Performance 99, Accessibility 100, Best Practices 100, SEO 100**; LCP 1,653 ms, CLS 0, TBT 119 ms.
+
+## Deployment, policy, and identity evidence
+
+- Deployed with `/opt/fleet/lib/deploy-static.sh vocab-confusion-log /work/repo/dist`; the custom domain returned HTTPS 200 after upload.
+- Live `/` is `no-cache, must-revalidate`; `/sw.js` is `no-cache, no-store, must-revalidate`; current fingerprinted JS and CSS are `public, max-age=31536000, immutable`.
+- The live policy includes the source-controlled self-only CSP (with the documented Sociobot API only in `connect-src`), `Permissions-Policy: microphone=(self)`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, and `X-Content-Type-Options: nosniff`.
+- Every deployable public build file matched the live byte stream by SHA-256 (excluding the host-consumed `staticwebapp.config.json`). Key release files:
 
 | File | SHA-256 |
 | --- | --- |
-| `index.html` | `a7aed30d033ac568bb60c76b5a31cd87e7445849afe9ba8141a68bdfb4c81eb4` |
-| `assets/app-BTFRWLIb.js` | `c0e223c9267fbad97247bcc01749584af1ecba4e0d0b908e7f14e00a9e8047a8` |
-| `assets/skip-link-DAzFukb-.css` | `798e7c9cb261b8f8911e0313324c6a51fd50e05c8326e9afa75964c8eafca07e` |
+| `index.html` | `5ee3119f174f45c8404c4747f9a842d4bdb6d3d3e588a890cd3a0ea4e53adab2` |
+| `assets/app-DawrVttZ.js` | `e10586a8d8a94f1265d67168e996f4ffb785852d7319576273f1476e0f3ad88e` |
+| `assets/skip-link-5JSsjZyU.css` | `4a3177380569c1e9271cd0a5008a01b3ad232539ee796d654de1a531872e9258` |
+| `assets/skip-link-BsHzyCpP.js` | `909738ecd28b74c6571c016cf1e2b338eea5e7b8f3a4da68254da8cc063e161c` |
+| `sw.js` | `1932adfc238d856eea0b1130fc65099a2d3747e582f4e8804ddc40fc8afebe33` |
+| `manifest.webmanifest` | `8e711a95e0d7561b57231420de07f6855117fc85bace09f84c4e5ac344362fe1` |
+| `privacy/index.html` | `7c63832221061d682e4be427a64950445e5bbce9c8e3ef9fcb982d4968682126` |
+| `terms/index.html` | `a5d63eec89b28b89abf6f71abbb8febccdca1f551b488cbb24e3e02c4476a644` |
 
-## Remaining follow-up
+## Known follow-up
 
-The verifier’s non-blocking HSTS observation remains platform-owned: Azure Static Web Apps currently sends `Strict-Transport-Security: max-age=10886400; includeSubDomains; preload`, whose `max-age` is shorter than the preload requirement. Static response configuration cannot alter that managed header. The release-blocking immutable cache defect is fixed; the factory platform should either raise the HSTS duration to one year or remove `preload` in its edge configuration.
+The managed Azure edge still sends `Strict-Transport-Security: max-age=10886400; includeSubDomains; preload`. The `preload` directive requires a one-year minimum and is platform-owned; this repository’s static response configuration cannot override it. This was recorded by the verifier as non-blocking and remains the only follow-up.
