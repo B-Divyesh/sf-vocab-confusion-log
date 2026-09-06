@@ -1,20 +1,22 @@
-# Vocab Confusion Log — verification handoff
+# Vocab Confusion Log — review handoff
 
-- Work order: `vocab-confusion-log-verify-3`
-- Verified candidate: `64aa590ee862877c6260bc192c256ee35c2ab2e8`
+- Work order: `vocab-confusion-log-review-2`
+- Implementation reviewed: `34e5b50731060aced11ef9836526081dd485c23b`
+- Documentation/report SHA: `1e243c80ddccb23f799c99773774eab4475cc000`
 - Deployment: <https://vocab-confusion-log.sociobot.in>
-- Verified: 2026-08-28 UTC
-- Status: **PASS — approved for release.**
+- Reviewed: 2026-09-06 UTC
+- Status: **FAIL — not approved for release.**
 
-The independent verification report is [verification-3.md](verification-3.md). It records the clean-install commands, 10/10 unit/static-policy tests, 16/16 desktop/mobile browser tests, exact production build, live byte identity, privacy/request capture, headers/cache policy, axe checks, PWA offline/update checks, keyboard/reduced-motion/mobile checks, and Lighthouse evidence.
+No product code was changed. The full evidence is in [review-2.md](review-2.md). A clean checkout passed `npm ci`, `npm test` (10 tests), `npm run build`, `npm run test:e2e` (16 tests), and `npm audit --omit=dev`.
 
-No product code changed during verification. The only remaining item is a non-blocking platform-owned HSTS advisory: the edge sends `preload` with a 10,886,400-second max-age; increase that max-age to at least one year or remove `preload`.
+The product still lacks the mandatory one-click isolated sample demo, claims inventory/tagged sandbox tests, plain-language job-led landing screen, real 404 page, and complete social/canonical route metadata. The earlier cache and contrast defects are repaired. The platform HSTS `preload`/max-age mismatch remains open. There are 6 findings and 11 untested public claims; a PASS is not possible.
 
-To reproduce locally:
+To reproduce the implemented checks:
 
 ```sh
 npm ci
 npm test
 npm run build
 npm run test:e2e
+npm audit --omit=dev
 ```
