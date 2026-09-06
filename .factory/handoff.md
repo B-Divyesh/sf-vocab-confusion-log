@@ -1,11 +1,21 @@
-# Vocab Confusion Log — repair 3 handoff
+# Vocab Confusion Log — verification 4 handoff
 
-- Work order: `vocab-confusion-log-repair-3`
+- Work order: `vocab-confusion-log-verify-4`
 - Live URL: <https://vocab-confusion-log.sociobot.in>
 - Deployed implementation SHA: `cad4040b15dd493a8b355f3110b8c2b8193af963`
 - Deployment date: 2026-09-06 UTC
-- Documentation: this later report-only commit; the implementation SHA above is the live product candidate
-- Strict status: **PASS** — 0 findings and 0 untested public claims
+- Documentation at verification start: `b2cc85c5ddddcb806b7be6c94910c61391407b95` (report-only; the implementation SHA above is the live product candidate)
+- Independent verification status: **PASS** — 0 findings and 0 untested public claims
+
+## Verification 4 result
+
+Fresh detached checkout verification at `cad4040…` passed `npm ci`, 12/12 unit/policy tests, production build, 20/20 desktop/mobile E2E tests, `npm audit --omit=dev`, and every one of the 12 declared claim commands run separately. The live root, Demo, Log, nested routes, legal pages, PWA files, and designed 404 were then checked in fresh desktop and phone browser contexts.
+
+The live application matches the candidate build byte-for-byte for HTML documents, service worker, manifest, sitemap, fingerprinted JavaScript/CSS, and social image. Live Demo has realistic sample data, a persistent isolated-demo label, reset, and safe exit; reset and real-data isolation passed. Normal use uses same-origin requests, demo offline reload passed, invalid-input recovery passed, and no personal data was observed leaving the product during ordinary demo use.
+
+Accessibility checks found zero serious/critical axe issues, no normal-load console errors, one H1 and a main landmark per page, no missing alt text or unlabelled buttons, no phone horizontal overflow, and no visible controls below 44 px. The URL verifier passed. Live Lighthouse scored 100 Performance, 100 Accessibility, 100 Best Practices, and 100 SEO (LCP 1.48 s, CLS 0, TBT 91 ms).
+
+Full evidence and the prior-finding disposition are in `.factory/verification-4.md`; supporting files are in `/work/.evidence/`.
 
 ## What changed
 
