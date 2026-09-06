@@ -4,9 +4,9 @@ const PRECACHE = __PRECACHE_MANIFEST__;
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then(async (cache) => {
     await cache.addAll(PRECACHE);
-    const shell = await cache.match('/index.html');
-    const html = shell ? await shell.text() : '';
-    const builtAssets = [...html.matchAll(/(?:src|href)="(\/assets\/[^\"]+)"/g)].map((match) => match[1]);
+    const documents = ['/index.html', '/log/', '/demo/', '/privacy/', '/terms/', '/404.html'];
+    const html = (await Promise.all(documents.map(async (path) => (await cache.match(path))?.text() ?? ''))).join('\n');
+    const builtAssets = [...new Set([...html.matchAll(/(?:src|href)="(\/assets\/[^\"]+)"/g)].map((match) => match[1]))];
     if (builtAssets.length) await cache.addAll(builtAssets);
   }));
 });
@@ -36,7 +36,11 @@ self.addEventListener('fetch', (event) => {
           caches.open(CACHE).then((cache) => cache.put(request, copy));
           return response;
         })
-        .catch(async () => (await caches.match(request, { ignoreVary: true })) || (await caches.match('/index.html', { ignoreVary: true })) || caches.match('/offline.html', { ignoreVary: true }))
+        .catch(async () => {
+          const path = new URL(request.url).pathname;
+          const routeShell = path.startsWith('/demo/') ? '/demo/' : path.startsWith('/log/') ? '/log/' : '/index.html';
+          return (await caches.match(request, { ignoreVary: true })) || (await caches.match(routeShell, { ignoreVary: true })) || caches.match('/offline.html', { ignoreVary: true });
+        })
     );
     return;
   }

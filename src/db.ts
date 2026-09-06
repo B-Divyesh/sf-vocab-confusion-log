@@ -1,11 +1,15 @@
 import type { Attempt, Backup, SerializedPair, WordPair } from './types';
 
-const DB_NAME = 'vocab-confusion-log';
+let databaseName = 'vocab-confusion-log';
 const DB_VERSION = 1;
+
+export function setDatabaseName(name: 'vocab-confusion-log' | 'demo:vocab-confusion-log'): void {
+  databaseName = name;
+}
 
 function openDatabase(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    const request = indexedDB.open(databaseName, DB_VERSION);
     request.onupgradeneeded = () => {
       const db = request.result;
       if (!db.objectStoreNames.contains('pairs')) db.createObjectStore('pairs', { keyPath: 'id' });
@@ -17,6 +21,19 @@ function openDatabase(): Promise<IDBDatabase> {
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error ?? new Error('The local database could not be opened.'));
   });
+}
+
+export async function replaceAllData(pairs: WordPair[], attempts: Attempt[]): Promise<void> {
+  const db = await openDatabase();
+  const transaction = db.transaction(['pairs', 'attempts'], 'readwrite');
+  const pairStore = transaction.objectStore('pairs');
+  const attemptStore = transaction.objectStore('attempts');
+  pairStore.clear();
+  attemptStore.clear();
+  for (const pair of pairs) pairStore.put(pair);
+  for (const attempt of attempts) attemptStore.put(attempt);
+  await transactionDone(transaction);
+  db.close();
 }
 
 function requestResult<T>(request: IDBRequest<T>): Promise<T> {

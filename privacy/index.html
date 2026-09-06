@@ -5,29 +5,48 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#F3E8CF" />
     <meta name="description" content="Privacy policy for Vocab Confusion Log." />
+    <link rel="canonical" href="https://vocab-confusion-log.sociobot.in/privacy/" />
     <link rel="icon" href="/icons/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Privacy — Vocab Confusion Log" />
+    <meta property="og:description" content="How Vocab Confusion Log stores local words, recordings, and license details." />
+    <meta property="og:url" content="https://vocab-confusion-log.sociobot.in/privacy/" />
+    <meta property="og:image" content="https://vocab-confusion-log.sociobot.in/assets/vocab-confusion-log-social.jpg" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Privacy — Vocab Confusion Log" />
+    <meta name="twitter:description" content="How Vocab Confusion Log stores local words, recordings, and license details." />
+    <meta name="twitter:image" content="https://vocab-confusion-log.sociobot.in/assets/vocab-confusion-log-social.jpg" />
     <link rel="stylesheet" href="/src/style.css" />
     <title>Privacy — Vocab Confusion Log</title>
   </head>
   <body>
     <a class="skip-link" href="#main-content">Skip to main content</a>
-    <header class="legal-header"><a class="wordmark" href="/">Vocab Confusion Log</a></header>
+    <header class="site-header"><a class="brand" href="/" aria-label="Vocab Confusion Log home"><span class="brand-mark" aria-hidden="true"><i></i><i></i></span><span>Vocab Confusion Log</span></a><nav aria-label="Main navigation"><a class="nav-link" href="/demo/">Demo</a><a class="nav-link" href="/log/">My log</a><a class="nav-link is-active" href="/privacy/" aria-current="page">Privacy</a></nav></header>
     <main class="legal-page" id="main-content" tabindex="-1">
       <p class="eyebrow">Plain-language policy · 27 August 2026</p>
-      <h1>Privacy, kept local.</h1>
-      <p class="lede">Your word pairs, notes, attempt history, and voice recordings stay in this browser’s IndexedDB. We do not receive them.</p>
+      <h1>How your data stays private</h1>
+      <p class="lede">Your word pairs, notes, practice history, and recordings stay in this browser. We do not receive them.</p>
       <h2>What is stored</h2>
-      <p>The app stores the confusion pairs you enter, your contrast cues and mnemonics, optional microphone recordings, practice results, and next-due dates on this device. A purchased license token and its last verification result are stored in localStorage.</p>
+      <p>The app stores your confusion pairs, cues, mnemonics, recordings, results, and due dates on this device.</p>
+      <p>A purchased license token and its last verification result are stored in this browser.</p>
       <h2>What leaves your device</h2>
-      <p>Nothing during ordinary logging and practice. If you buy or restore the one-time unlock, the browser contacts Sociobot’s billing API to verify the license token. Sociobot/Dodo is the merchant of record and processes payment details on its hosted checkout; this app never sees card details.</p>
+      <p>Ordinary logging and practice send no personal data.</p>
+      <p>Buying or restoring Pro sends the license token to Sociobot’s billing API for verification.</p>
+      <p>Sociobot/Dodo processes payment on its hosted checkout. This app never sees card details.</p>
       <h2>Microphone access</h2>
-      <p>Access is requested only after you press a record button. Audio is captured locally, is never speech-scored, and is not uploaded. Removing a recording or deleting its pair removes that audio from this app’s database.</p>
+      <p>Microphone access is requested only after you press a record button.</p>
+      <p>Audio is captured locally. It is not speech-scored or uploaded.</p>
+      <p>Removing a recording or deleting its pair removes that audio from the app database.</p>
       <h2>Your control</h2>
-      <p>Use JSON backup to move or preserve all pair data, including recordings. CSV export contains resolved pair text and progress, but not audio. Clearing this site’s browser storage deletes the local data and cannot be undone unless you made a backup.</p>
+      <p>Use JSON backup to move or preserve all pair data, including recordings.</p>
+      <p>CSV export contains resolved pair text and progress, but not audio.</p>
+      <p>Clearing this site’s storage deletes local data. A JSON backup can restore it.</p>
       <h2>Analytics and contact</h2>
       <p>There are no analytics, advertising cookies, trackers, or third-party runtime scripts. Questions may be sent to <a href="mailto:privacy@sociobot.in">privacy@sociobot.in</a>.</p>
-      <p><a class="button-link" href="/">Back to your log</a></p>
+      <p><a class="button-link" href="/">Return home</a></p>
     </main>
+    <footer class="site-footer"><p>Practise the word pairs you repeatedly confuse.</p><p><a href="/privacy/">Privacy</a><a href="/terms/">Terms</a><span>Built by Param Factory</span><span>Version 1.1.0</span></p></footer>
     <script type="module" src="/src/skip-link.ts"></script>
   </body>
 </html>

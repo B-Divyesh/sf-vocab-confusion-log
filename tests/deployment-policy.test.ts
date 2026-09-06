@@ -4,20 +4,22 @@ import { describe, expect, it } from 'vitest';
 
 type StaticWebAppConfig = {
   globalHeaders: Record<string, string>;
-  navigationFallback: { rewrite: string; exclude: string[] };
-  routes: Array<{ route: string; headers: Record<string, string> }>;
+  responseOverrides: Record<string, { rewrite: string; statusCode: number }>;
+  routes: Array<{ route: string; rewrite?: string; headers?: Record<string, string> }>;
 };
 
 const config = JSON.parse(
   readFileSync(resolve(import.meta.dirname, '../public/staticwebapp.config.json'), 'utf8')
 ) as StaticWebAppConfig;
 
-const routeHeaders = (route: string) => config.routes.find((entry) => entry.route === route)?.headers;
+const route = (path: string) => config.routes.find((entry) => entry.route === path);
+const routeHeaders = (path: string) => route(path)?.headers;
 
 describe('static deployment response policy', () => {
   it('ships an immutable one-year cache policy for fingerprinted build assets', () => {
     expect(routeHeaders('/assets/*')?.['Cache-Control']).toBe('public, max-age=31536000, immutable');
-    expect(config.navigationFallback.exclude).toContain('/assets/*');
+    expect(route('/log/*')?.rewrite).toBe('/log/index.html');
+    expect(route('/demo/*')?.rewrite).toBe('/demo/index.html');
   });
 
   it('keeps update entry points revalidatable', () => {
@@ -30,5 +32,13 @@ describe('static deployment response policy', () => {
     expect(config.globalHeaders['Content-Security-Policy']).toContain("frame-ancestors 'none'");
     expect(config.globalHeaders['Permissions-Policy']).toBe('microphone=(self)');
     expect(config.globalHeaders['X-Frame-Options']).toBe('DENY');
+  });
+
+  it('serves unknown paths as a designed HTTP 404', () => {
+    expect(config.responseOverrides['404']).toEqual({ rewrite: '/404.html', statusCode: 404 });
+  });
+
+  it('uses a preload-compatible HSTS duration', () => {
+    expect(config.globalHeaders['Strict-Transport-Security']).toBe('max-age=31536000; includeSubDomains; preload');
   });
 });

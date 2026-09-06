@@ -1,22 +1,24 @@
 # Vocab Confusion Log
 
-Vocab Confusion Log is a local-first PWA for language learners who keep mixing up the same near-neighbor words. Instead of making another deck, log the exact pair, add one contrast cue and optional mnemonic, record your own pronunciation, then alternate between text → audio and audio → text retrieval.
+Vocab Confusion Log is a local-first PWA for language learners who repeatedly confuse the same words. Log the pair, add one contrast cue, and optionally record your own pronunciation. The app switches between text → audio and audio → text practice when both recordings exist.
 
 A pair resolves after three clean scheduled attempts: immediately, one day later, and three days after that. A miss resets the clean run and returns in ten minutes. This is repair history, not a proficiency score.
 
 Live product: <https://vocab-confusion-log.sociobot.in>
 
+One-click sample: <https://vocab-confusion-log.sociobot.in/demo/>
+
 ## What ships
 
-- IndexedDB storage for pairs, notes, local recordings, due dates, and attempt history
-- Text → audio self-checks and exact audio → text production checks
-- Three-clean-attempt resolution workflow with visible history
-- Full JSON backup/import, including recordings, plus CSV export of resolved pairs
-- Installable offline shell with update notification and 192/512/maskable icons
-- Responsive keyboard and 390 px mobile paths, reduced-motion support, and legal pages
-- Free tier with eight active pairs; US$9 one-time Pro license removes that cap
+- Browser storage for pairs, notes, recordings, due dates, and attempt history
+- Text → audio and audio → text practice when both recordings exist
+- Resolution after three scheduled correct attempts
+- JSON backup and restore, including recordings
+- CSV export with one row per resolved pair
+- Installable offline shell with an in-app update action
+- Eight active pairs for free; a US$9 one-time Pro license removes that limit
 
-The Pro purchase uses Sociobot’s hosted billing and license verification API. No payment provider or card handling is embedded in this repository. Set `VITE_BILLING_BASE_URL` only when the factory needs a non-production billing API; the default is `https://api.sociobot.in`.
+The Pro purchase uses Sociobot’s hosted billing and license verification API. New checkout is pending product registration. Existing license restore remains implemented, and the free app remains usable. No payment provider or card handling is embedded here.
 
 ## Run locally
 
@@ -29,21 +31,25 @@ npm run dev
 
 Vite prints the local URL. Microphone recording requires localhost or HTTPS and explicit browser permission.
 
+Open `/demo/` for the isolated sample. Its IndexedDB database and license keys use a `demo:` prefix. **Reset demo** restores the sample, and **Start for real** clears demo data before opening `/log/`.
+
 ## Test and build
 
 ```sh
 npm test
 npm run build
 npm run test:e2e
+npm run test:claims
+npm audit --omit=dev
 ```
 
-`npm run build` is the deployment command. It type-checks the project and writes the static site to `dist/`, with `dist/index.html` at its root. The Playwright suite uses the factory-pinned Chromium from Playwright 1.58.2 and checks the real add/practice path, axe accessibility, 390 px layout, direct legal routes, and an offline reload.
+`npm run build` type-checks the project and writes the static site to `dist/`. The browser suite checks the real workflow, routes, keyboard, mobile layout, metadata, 404, and accessibility. The claims suite runs every command declared in `.factory/claims.json` against `/demo/`.
 
 ## Data and privacy
 
-Ordinary use makes no network requests beyond loading the app. Word pairs and recordings remain in the browser. JSON backup is the portable source of truth; clearing site storage without a backup permanently removes local data. A license token is kept in `localStorage` and is sent only to Sociobot’s verify endpoint at most once per day. See [/privacy](https://vocab-confusion-log.sociobot.in/privacy/) and [/terms](https://vocab-confusion-log.sociobot.in/terms/).
+Ordinary logging and practice make only same-origin requests. Word pairs and recordings remain in the browser. JSON backup includes local records and recordings. Clearing site storage without a backup permanently removes that data. License verification is the only optional request to `api.sociobot.in`. See [/privacy](https://vocab-confusion-log.sociobot.in/privacy/) and [/terms](https://vocab-confusion-log.sociobot.in/terms/).
 
-There are no analytics, advertising cookies, third-party fonts, or runtime CDN scripts. Record only your own voice or audio you have rights to use.
+There are no analytics, advertising cookies, third-party fonts, or runtime CDN scripts. Record only audio you have rights to use.
 
 ## Project map
 

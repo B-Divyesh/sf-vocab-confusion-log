@@ -1,0 +1,79 @@
+[
+  {
+    "id": "offline-reload",
+    "claim": "Works offline after the first visit",
+    "where": "landing facts, app offline notice, README",
+    "test": "npm run test:claims -- --grep @claim:offline-reload",
+    "sandbox": "fresh browser context at /demo/; activate the service worker, go offline, reload, and assert the populated demo remains usable"
+  },
+  {
+    "id": "recordings-local",
+    "claim": "Voice recordings stay in this browser",
+    "where": "landing facts, recording form, privacy page, README",
+    "test": "npm run test:claims -- --grep @claim:recordings-local",
+    "sandbox": "record through the demo UI; assert an audio Blob exists in demo:vocab-confusion-log and every request is same-origin"
+  },
+  {
+    "id": "ordinary-use-local",
+    "claim": "Ordinary logging and practice send no personal data",
+    "where": "landing privacy section, privacy page, README",
+    "test": "npm run test:claims -- --grep @claim:ordinary-use-local",
+    "sandbox": "capture every request while completing a demo practice and assert all requests stay on the product origin"
+  },
+  {
+    "id": "no-analytics",
+    "claim": "No analytics or tracking runs in the product",
+    "where": "privacy page, README",
+    "test": "npm run test:claims -- --grep @claim:no-analytics",
+    "sandbox": "use the demo, capture requests and sendBeacon calls, and assert no cookies, beacons, or third-party requests"
+  },
+  {
+    "id": "alternating-practice",
+    "claim": "Practice switches between audio-to-text and text-to-audio when both recordings exist",
+    "where": "landing how-it-works section, app, README",
+    "test": "npm run test:claims -- --grep @claim:alternating-practice",
+    "sandbox": "complete the seeded audio-to-text sample, make it due, and assert the next prompt is text-to-audio"
+  },
+  {
+    "id": "three-delayed-attempts",
+    "claim": "A pair resolves after three scheduled correct attempts",
+    "where": "landing preview and how-it-works section, app, terms, README",
+    "test": "npm run test:claims -- --grep @claim:three-delayed-attempts",
+    "sandbox": "complete the sample at each due boundary; assert one-day, three-day, and resolved outcomes"
+  },
+  {
+    "id": "json-backup-restore",
+    "claim": "JSON backup and restore include pairs, attempt history, and recordings",
+    "where": "Data page, privacy page, README",
+    "test": "npm run test:claims -- --grep @claim:json-backup-restore",
+    "sandbox": "download the demo backup, inspect all sample records and encoded audio, delete a pair, import, and assert it returns"
+  },
+  {
+    "id": "resolved-csv",
+    "claim": "CSV export contains one row for each resolved pair",
+    "where": "Data page, privacy page, README",
+    "test": "npm run test:claims -- --grep @claim:resolved-csv",
+    "sandbox": "download the demo CSV and assert its header and single resolved sample row"
+  },
+  {
+    "id": "pwa-install-update",
+    "claim": "The installable app detects and applies a newer version",
+    "where": "app update notice, README",
+    "test": "npm run test:claims -- --grep @claim:pwa-install-update",
+    "sandbox": "check the manifest, install the production service worker, change its bytes, request an update, and activate it from the in-app notice"
+  },
+  {
+    "id": "free-eight-pairs",
+    "claim": "The free plan allows eight active pairs; resolved pairs do not count",
+    "where": "landing facts and pricing, Data page, terms, README",
+    "test": "npm run test:claims -- --grep @claim:free-eight-pairs",
+    "sandbox": "place eight active plus one resolved pair in the demo and assert the next add action is blocked with the limit explanation"
+  },
+  {
+    "id": "pro-unlimited",
+    "claim": "Pro costs US$9 once and a valid license removes the active-pair limit",
+    "where": "landing facts and pricing, Data page, terms, README",
+    "test": "npm run test:claims -- --grep @claim:pro-unlimited",
+    "sandbox": "use a recorded valid verification response in the demo namespace, assert the price and active status, then open the add form above eight active pairs"
+  }
+]

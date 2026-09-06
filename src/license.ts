@@ -1,36 +1,48 @@
 import type { LicenseVerdict } from './types';
 
 const SLUG = 'vocab-confusion-log';
-const TOKEN_KEY = `sb_license:${SLUG}`;
-const VERDICT_KEY = `${TOKEN_KEY}:verdict`;
+let storagePrefix = '';
 const DAY = 24 * 60 * 60 * 1000;
 export const BILLING_BASE = (import.meta.env.VITE_BILLING_BASE_URL || 'https://api.sociobot.in').replace(/\/$/, '');
 export const CHECKOUT_URL = `${BILLING_BASE}/api/v1/products/${SLUG}/checkout`;
+export const BILLING_AVAILABLE = import.meta.env.VITE_BILLING_AVAILABLE === 'true';
+
+function tokenKey(): string {
+  return `${storagePrefix}sb_license:${SLUG}`;
+}
+
+function verdictKey(): string {
+  return `${tokenKey()}:verdict`;
+}
+
+export function setLicenseStoragePrefix(prefix: '' | 'demo:'): void {
+  storagePrefix = prefix;
+}
 
 export function consumeReturnedLicense(): string | null {
   const url = new URL(window.location.href);
   const token = url.searchParams.get('license');
   if (!token) return null;
-  if (localStorage.getItem(TOKEN_KEY) !== token) localStorage.removeItem(VERDICT_KEY);
-  localStorage.setItem(TOKEN_KEY, token);
+  if (localStorage.getItem(tokenKey()) !== token) localStorage.removeItem(verdictKey());
+  localStorage.setItem(tokenKey(), token);
   url.searchParams.delete('license');
   history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
   return token;
 }
 
 export function storedToken(): string | null {
-  return localStorage.getItem(TOKEN_KEY);
+  return localStorage.getItem(tokenKey());
 }
 
 export function storeToken(token: string): void {
   const clean = token.trim();
-  if (localStorage.getItem(TOKEN_KEY) !== clean) localStorage.removeItem(VERDICT_KEY);
-  localStorage.setItem(TOKEN_KEY, clean);
+  if (localStorage.getItem(tokenKey()) !== clean) localStorage.removeItem(verdictKey());
+  localStorage.setItem(tokenKey(), clean);
 }
 
 export function cachedVerdict(): LicenseVerdict | null {
   try {
-    const parsed = JSON.parse(localStorage.getItem(VERDICT_KEY) ?? 'null') as LicenseVerdict | null;
+    const parsed = JSON.parse(localStorage.getItem(verdictKey()) ?? 'null') as LicenseVerdict | null;
     return parsed && typeof parsed.valid === 'boolean' && typeof parsed.checkedAt === 'number' ? parsed : null;
   } catch {
     return null;
@@ -54,7 +66,7 @@ export async function verifyLicense(token: string): Promise<LicenseVerdict> {
       expires_at: data.expires_at,
       checkedAt: Date.now()
     };
-    localStorage.setItem(VERDICT_KEY, JSON.stringify(verdict));
+    localStorage.setItem(verdictKey(), JSON.stringify(verdict));
     return verdict;
   } catch {
     return { valid: cachedVerdict()?.valid ?? false, reason: 'unreachable', checkedAt: Date.now() };

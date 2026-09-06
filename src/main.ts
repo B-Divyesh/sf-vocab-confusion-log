@@ -1,19 +1,27 @@
 import './style.css';
 import { activateSkipLink } from './skip-link';
-import { deletePair, getAttempts, getPairs, importBackup, makeBackup, saveAttemptAndPair, savePair } from './db';
-import { applyGrade, formatRelativeDue, FREE_ACTIVE_LIMIT, nextMode, normalizeAnswer, resolvedCsv, samePair } from './model';
+import { deletePair, getAttempts, getPairs, importBackup, makeBackup, replaceAllData, saveAttemptAndPair, savePair, setDatabaseName } from './db';
+import { applyGrade, DAY, formatRelativeDue, FREE_ACTIVE_LIMIT, nextMode, normalizeAnswer, resolvedCsv, samePair } from './model';
 import {
   cachedVerdict,
+  BILLING_AVAILABLE,
   CHECKOUT_URL,
   consumeReturnedLicense,
   storedToken,
   storeToken,
+  setLicenseStoragePrefix,
   verificationDue,
   verifyLicense
 } from './license';
 import type { Attempt, LicenseVerdict, PracticeMode, WordPair, WordSide } from './types';
 
 type View = 'desk' | 'practice' | 'pairs' | 'data';
+
+const isDemo = window.location.pathname === '/demo' || window.location.pathname.startsWith('/demo/');
+const routeBase = isDemo ? '/demo' : '/log';
+const demoSeedKey = 'demo:vocab-confusion-log:seeded';
+setDatabaseName(isDemo ? 'demo:vocab-confusion-log' : 'vocab-confusion-log');
+setLicenseStoragePrefix(isDemo ? 'demo:' : '');
 
 interface PracticeSession {
   pairId: string;
@@ -47,7 +55,7 @@ const state: AppState = {
   loading: true,
   pairs: [],
   attempts: [],
-  view: viewFromHash(),
+  view: viewFromPath(),
   dialogOpen: false,
   online: navigator.onLine,
   license: cachedVerdict(),
@@ -61,6 +69,7 @@ let removedAudio = new Set<WordSide>();
 let activeRecorder: { recorder: MediaRecorder; stream: MediaStream; side: WordSide } | null = null;
 const audioUrls = new WeakMap<Blob, string>();
 let serviceWorkerRegistration: ServiceWorkerRegistration | null = null;
+let updateRequested = false;
 
 function escapeHtml(value: unknown): string {
   return String(value ?? '')
@@ -71,9 +80,29 @@ function escapeHtml(value: unknown): string {
     .replaceAll("'", '&#039;');
 }
 
-function viewFromHash(): View {
-  const value = window.location.hash.slice(1);
+function viewFromPath(): View {
+  const value = window.location.pathname.replace(routeBase, '').replaceAll('/', '');
   return value === 'practice' || value === 'pairs' || value === 'data' ? value : 'desk';
+}
+
+function viewUrl(view: View): string {
+  return view === 'desk' ? `${routeBase}/` : `${routeBase}/${view}/`;
+}
+
+function viewTitle(view: View): string {
+  const labels: Record<View, string> = { desk: isDemo ? 'Demo' : 'Log', practice: 'Practice', pairs: 'Pairs', data: 'Data' };
+  const label = labels[view];
+  return `${label} — Vocab Confusion Log`;
+}
+
+function updateRouteMetadata(): void {
+  const title = viewTitle(state.view);
+  const absoluteUrl = `${window.location.origin}${viewUrl(state.view)}`;
+  document.title = title;
+  document.querySelector<HTMLLinkElement>('link[rel="canonical"]')?.setAttribute('href', absoluteUrl);
+  document.querySelector<HTMLMetaElement>('meta[property="og:title"]')?.setAttribute('content', title);
+  document.querySelector<HTMLMetaElement>('meta[property="og:url"]')?.setAttribute('content', absoluteUrl);
+  document.querySelector<HTMLMetaElement>('meta[name="twitter:title"]')?.setAttribute('content', title);
 }
 
 function isPro(): boolean {
@@ -99,40 +128,43 @@ function audioUrl(blob: Blob): string {
 
 function navLink(view: View, label: string, count?: number): string {
   const active = state.view === view;
-  return `<a class="nav-link${active ? ' is-active' : ''}" href="#${view}" ${active ? 'aria-current="page"' : ''}>${label}${count ? ` <span class="nav-count" aria-label="${count} due">${count}</span>` : ''}</a>`;
+  return `<a class="nav-link${active ? ' is-active' : ''}" href="${viewUrl(view)}" data-view="${view}" ${active ? 'aria-current="page"' : ''}>${label}${count ? ` <span class="nav-count" aria-label="${count} due">${count}</span>` : ''}</a>`;
 }
 
 function render(): void {
+  updateRouteMetadata();
   if (state.loading) {
-    app.innerHTML = `<main class="loading-page" id="main-content" tabindex="-1"><div class="loading-mark" aria-hidden="true"></div><p>Opening your local repair desk…</p></main>`;
+    app.innerHTML = `<main class="loading-page" id="main-content" tabindex="-1"><div class="loading-mark" aria-hidden="true"></div><p>Opening your confusion log…</p></main>`;
     return;
   }
   if (state.error) {
-    app.innerHTML = `<main class="error-page" id="main-content" tabindex="-1"><p class="eyebrow">Local storage error</p><h1>Your repair desk could not open.</h1><p>${escapeHtml(state.error)}</p><button class="button primary" data-retry>Try again</button></main>`;
+    app.innerHTML = `<main class="error-page" id="main-content" tabindex="-1"><p class="eyebrow">Local storage error</p><h1>Your confusion log could not open</h1><p>${escapeHtml(state.error)}</p><button class="button primary" data-retry>Try again</button></main>`;
     app.querySelector('[data-retry]')?.addEventListener('click', () => void loadData());
     return;
   }
 
   const due = duePairs().length;
   app.innerHTML = `
+    ${isDemo ? `<aside class="demo-banner" aria-label="Demo mode"><strong>Demo — sample data, nothing is saved</strong><span>Changes stay separate from your real log.</span><div><button class="text-button" data-reset-demo>Reset demo</button><a class="button small" href="/log/" data-leave-demo>Start for real</a></div></aside>` : ''}
     <header class="site-header">
-      <a class="brand" href="#desk" aria-label="Vocab Confusion Log, desk">
+      <a class="brand" href="/" ${isDemo ? 'data-leave-demo' : ''} aria-label="Vocab Confusion Log home">
         <span class="brand-mark" aria-hidden="true"><i></i><i></i></span>
-        <h1>Vocab Confusion Log</h1>
+        <span>Vocab Confusion Log</span>
       </a>
       <nav aria-label="Main navigation">
-        ${navLink('desk', 'Desk')}
+        ${navLink('desk', 'Log')}
         ${navLink('practice', 'Practice', due)}
         ${navLink('pairs', 'Pairs')}
         ${navLink('data', isPro() ? 'Data · Pro' : 'Data')}
       </nav>
     </header>
+    <div class="sr-only" role="status" aria-live="polite">${escapeHtml(viewTitle(state.view))}</div>
     ${!state.online ? '<div class="offline-strip" role="status"><span aria-hidden="true">●</span> Offline — logging, recordings, and practice still work here.</div>' : ''}
     ${state.notice ? `<div class="notice-strip" role="status">${escapeHtml(state.notice)}<button class="icon-button" data-dismiss-notice aria-label="Dismiss notice">×</button></div>` : ''}
     <main id="main-content" tabindex="-1">${renderView()}</main>
     <footer class="site-footer">
-      <p>Your words and recordings stay on this device.</p>
-      <p><a href="/privacy/">Privacy</a><a href="/terms/">Terms</a><span>Original AI-assisted collage · no analytics</span></p>
+      <p>Practise the word pairs you repeatedly confuse.</p>
+      <p><a href="/privacy/" ${isDemo ? 'data-leave-demo' : ''}>Privacy</a><a href="/terms/" ${isDemo ? 'data-leave-demo' : ''}>Terms</a><span>Built by Param Factory</span><span>Version 1.1.0 · original AI-assisted collage</span></p>
     </footer>
     ${renderDialog()}
     ${state.updateReady ? '<div class="update-toast" role="status"><span>A fresh version is ready.</span><button class="button small" data-update>Update now</button></div>' : ''}
@@ -140,7 +172,10 @@ function render(): void {
   bindEvents();
   if (state.dialogOpen) {
     const dialog = app.querySelector<HTMLDialogElement>('#pair-dialog');
-    if (dialog && !dialog.open) dialog.showModal();
+    if (dialog && !dialog.open) {
+      dialog.showModal();
+      window.requestAnimationFrame(() => dialog.querySelector<HTMLInputElement>('#word-a')?.focus());
+    }
   }
 }
 
@@ -159,33 +194,33 @@ function renderDesk(): string {
   return `
     <section class="hero-grid" aria-labelledby="desk-title">
       <div class="hero-copy">
-        <p class="eyebrow">A repair bench for near-neighbor words</p>
-        <h2 id="desk-title">Stop reviewing everything. Repair the mix-up.</h2>
-        <p class="lede">Capture the two words, write one sharp contrast, then alternate between saying and spelling them until three delayed attempts come back clean.</p>
+        <p class="eyebrow">Focused practice for repeated word mix-ups</p>
+        <h1 id="desk-title">Practise the words you mix up</h1>
+        <p class="lede">Save two confusing words and one clear contrast. Then practise saying and spelling them until three delayed attempts are correct.</p>
         <div class="hero-actions">
-          <button class="button primary" data-add>${canAdd ? 'Log a confusion' : 'Unlock more pairs'}</button>
-          ${due.length ? '<a class="button secondary" href="#practice">Practise what’s due</a>' : ''}
+          <button class="button primary" data-add>${canAdd ? 'Log a confusion pair' : 'Unlock more pairs'}</button>
+          ${due.length ? `<a class="button secondary" href="${viewUrl('practice')}" data-view="practice">Practise what is due</a>` : ''}
         </div>
-        <p class="microcopy">No streaks. No speech scoring. No account.</p>
+        <p class="microcopy">No general word lists. No speech scoring. No account.</p>
       </div>
       <figure class="hero-art">
         <img src="/assets/repair-collage.webp" alt="Two blank paper cards loop between a listening ear and a speaking mouth" width="1200" height="800" decoding="async" fetchpriority="high" />
-        <figcaption>Hear it. Produce it. Contrast it.</figcaption>
+        <figcaption>Text and audio practice for one confusing pair.</figcaption>
       </figure>
     </section>
     <section class="status-ledger" aria-label="Repair status">
       <div><strong>${due.length}</strong><span>due now</span></div>
-      <div><strong>${active.length}</strong><span>in repair</span></div>
+      <div><strong>${active.length}</strong><span>active pairs</span></div>
       <div><strong>${resolved.length}</strong><span>resolved</span></div>
     </section>
     ${state.pairs.length === 0 ? renderEmptyState() : renderDeskQueue(due, active)}
     <section class="method-note" aria-labelledby="method-title">
-      <p class="eyebrow">The repair loop</p>
-      <h2 id="method-title">Three clean, spaced returns.</h2>
+      <p class="eyebrow">How practice works</p>
+      <h2 id="method-title">Complete three delayed attempts</h2>
       <ol>
-        <li><span>01</span><strong>Catch the pair</strong><p>Record the exact mix-up while it is fresh.</p></li>
-        <li><span>02</span><strong>Switch the route</strong><p>Move between written production and your own audio.</p></li>
-        <li><span>03</span><strong>Let it settle</strong><p>Clean attempts return after one and three days.</p></li>
+        <li><span>01</span><strong>Save the pair</strong><p>Add the exact mix-up and a short contrast cue.</p></li>
+        <li><span>02</span><strong>Change the prompt</strong><p>Switch between written prompts and your own audio.</p></li>
+        <li><span>03</span><strong>Complete the schedule</strong><p>Correct attempts return after one and three days.</p></li>
       </ol>
     </section>
   `;
@@ -195,10 +230,10 @@ function renderEmptyState(): string {
   return `
     <section class="empty-sheet" aria-labelledby="empty-title">
       <div class="crop-mark" aria-hidden="true"></div>
-      <p class="eyebrow">Your desk is clear</p>
-      <h2 id="empty-title">Start with the pair that tripped you today.</h2>
-      <p>Good entries are small: <em>affect / effect</em>, one contrast cue, and—if useful—your own quick recordings.</p>
-      <button class="text-action" data-add>Log the first confusion <span aria-hidden="true">→</span></button>
+      <p class="eyebrow">No pairs yet</p>
+      <h2 id="empty-title">Add the two words you confused today</h2>
+      <p>For example, add <em>affect / effect</em>, one contrast cue, and optional recordings.</p>
+      <button class="text-action" data-add>Log your first pair <span aria-hidden="true">→</span></button>
     </section>`;
 }
 
@@ -207,8 +242,8 @@ function renderDeskQueue(due: WordPair[], active: WordPair[]): string {
   return `
     <section class="queue-section" aria-labelledby="queue-title">
       <div class="section-heading">
-        <div><p class="eyebrow">${due.length ? 'Ready for another route' : 'Nothing due right now'}</p><h2 id="queue-title">${due.length ? 'On today’s desk' : 'Pairs in repair'}</h2></div>
-        <a href="#pairs">See all pairs</a>
+        <div><p class="eyebrow">${due.length ? 'Ready to practise' : 'Nothing due right now'}</p><h2 id="queue-title">${due.length ? 'Pairs due now' : 'Active pairs'}</h2></div>
+        <a href="${viewUrl('pairs')}" data-view="pairs">See all pairs</a>
       </div>
       <ul class="pair-stack">
         ${queue.map((pair) => `<li>${pairSummary(pair, true)}</li>`).join('')}
@@ -217,7 +252,7 @@ function renderDeskQueue(due: WordPair[], active: WordPair[]): string {
 }
 
 function progressDots(pair: WordPair): string {
-  return `<span class="progress-dots" aria-label="${pair.cleanStreak} of 3 clean attempts">${[1, 2, 3].map((step) => `<i class="${step <= pair.cleanStreak ? 'filled' : ''}"></i>`).join('')}</span>`;
+  return `<span class="progress-dots" role="img" aria-label="${pair.cleanStreak} of 3 correct attempts">${[1, 2, 3].map((step) => `<i class="${step <= pair.cleanStreak ? 'filled' : ''}"></i>`).join('')}</span>`;
 }
 
 function pairSummary(pair: WordPair, compact = false): string {
@@ -228,7 +263,7 @@ function pairSummary(pair: WordPair, compact = false): string {
       <div class="pair-meta">
         ${progressDots(pair)}
         <span>${pair.resolvedAt ? `Resolved ${new Date(pair.resolvedAt).toLocaleDateString()}` : formatRelativeDue(pair.dueAt)}</span>
-        ${pair.audioA && pair.audioB ? '<span class="audio-tag">● Audio ready</span>' : '<span>Text route</span>'}
+        ${pair.audioA && pair.audioB ? '<span class="audio-tag">● Audio ready</span>' : '<span>Text practice</span>'}
       </div>
       ${compact ? '' : `<div class="pair-actions"><button class="text-button" data-edit="${escapeHtml(pair.id)}">Edit pair</button><button class="text-button danger" data-delete="${escapeHtml(pair.id)}">Delete</button></div>`}
     </article>`;
@@ -255,10 +290,10 @@ function renderPractice(): string {
     return `
       <section class="practice-empty">
         <div class="stamp success" aria-hidden="true">✓</div>
-        <p class="eyebrow">Practice desk</p>
-        <h2>Nothing is due.</h2>
-        <p>${next ? `Your next pair returns ${escapeHtml(formatRelativeDue(next.dueAt).toLocaleLowerCase())}. Letting it wait is part of the repair.` : 'Log a confusion first; its opening attempt will be ready immediately.'}</p>
-        <a class="button primary" href="#desk">Back to the desk</a>
+        <p class="eyebrow">Practice</p>
+        <h1>Nothing is due</h1>
+        <p>${next ? `Your next pair returns ${escapeHtml(formatRelativeDue(next.dueAt).toLocaleLowerCase())}. Wait until then for the next attempt.` : 'Log a confusion pair first. Its first attempt is ready immediately.'}</p>
+        <a class="button primary" href="${viewUrl('desk')}" data-view="desk">Back to your log</a>
       </section>`;
   }
   const pair = state.pairs.find((item) => item.id === session.pairId);
@@ -272,14 +307,14 @@ function renderPractice(): string {
   return `
     <section class="practice-shell" aria-labelledby="practice-title">
       <div class="practice-topline">
-        <div><p class="eyebrow">${session.mode === 'audio-text' ? 'Route 2 · audio → text' : 'Route 1 · text → audio'}</p><h2 id="practice-title">${session.mode === 'audio-text' ? 'Listen, then write.' : 'Read, then say.'}</h2></div>
+        <div><p class="eyebrow">${session.mode === 'audio-text' ? 'Audio → text practice' : 'Text → audio practice'}</p><h1 id="practice-title">${session.mode === 'audio-text' ? 'Listen, then write' : 'Read, then say'}</h1></div>
         <span>${duePairs().length} due</span>
       </div>
       <div class="practice-card ${session.mode}">
         ${session.mode === 'audio-text' ? renderAudioTextPrompt(pair, targetAudio) : renderTextAudioPrompt(pair, targetWord, targetAudio, session.revealed)}
       </div>
       <aside class="contrast-slip"><strong>Contrast cue</strong><p>${escapeHtml(pair.contrast)}</p>${pair.mnemonic ? `<p class="mnemonic">Your hook: ${escapeHtml(pair.mnemonic)}</p>` : ''}</aside>
-      <p class="practice-note">A miss is useful evidence. It resets this pair’s clean run and brings it back in ten minutes.</p>
+      <p class="practice-note">A wrong answer resets the count and schedules this pair again in ten minutes.</p>
     </section>`;
 }
 
@@ -313,7 +348,7 @@ function renderPracticeResult(pair: WordPair, targetWord: string, session: Pract
     <section class="result-sheet ${result.correct ? 'correct' : 'incorrect'}" aria-live="polite">
       <div class="stamp ${result.correct ? 'success' : 'miss'}" aria-hidden="true">${result.correct ? '✓' : '↺'}</div>
       <p class="eyebrow">${result.correct ? 'Clean return logged' : 'Useful miss logged'}</p>
-      <h2>${result.resolved ? 'This pair is resolved.' : result.correct ? `${pair.cleanStreak} of 3 clean.` : 'The clean run starts again.'}</h2>
+      <h1>${result.resolved ? 'This pair is resolved' : result.correct ? `${pair.cleanStreak} of 3 correct` : 'The correct-attempt count starts again'}</h1>
       ${session.mode === 'audio-text' ? `<p>You wrote <strong>${escapeHtml(result.response || 'nothing')}</strong>. The recording was <strong>${escapeHtml(targetWord)}</strong>.</p>` : ''}
       <p>${result.resolved ? 'Three delayed attempts came back clean. The full history stays in your resolved list.' : result.correct ? `It will return ${escapeHtml(formatRelativeDue(result.nextDue).toLocaleLowerCase())}.` : 'It will return in about ten minutes, using the other route when audio is available.'}</p>
       <button class="button primary" data-next-practice>${duePairs().length > 1 ? 'Continue practice' : 'Finish this round'}</button>
@@ -325,12 +360,12 @@ function renderPairs(): string {
   const resolved = state.pairs.filter((pair) => pair.resolvedAt);
   return `
     <section class="page-heading">
-      <div><p class="eyebrow">The evidence, not another deck</p><h2>Every confusion pair.</h2><p>Attempt history stays attached, even when a pair is repaired.</p></div>
-      <button class="button primary" data-add>${isPro() || active.length < FREE_ACTIVE_LIMIT ? 'Log a confusion' : 'Unlock more pairs'}</button>
+      <div><p class="eyebrow">Your saved practice</p><h1>Review your confusion pairs</h1><p>Each pair keeps its attempt history after it is resolved.</p></div>
+      <button class="button primary" data-add>${isPro() || active.length < FREE_ACTIVE_LIMIT ? 'Log a confusion pair' : 'Unlock more pairs'}</button>
     </section>
     ${state.pairs.length ? `
       <div class="search-field"><label for="pair-search">Find a word or cue</label><input type="search" id="pair-search" placeholder="Search your local log" /></div>
-      <section class="pair-group" aria-labelledby="active-title"><div class="section-heading"><h2 id="active-title">In repair <span>${active.length}</span></h2></div>${active.length ? `<ul class="pair-list">${active.map((pair) => `<li data-search-text="${escapeHtml(`${pair.wordA} ${pair.wordB} ${pair.contrast} ${pair.mnemonic}`.toLocaleLowerCase())}">${pairSummary(pair)}${attemptHistory(pair)}</li>`).join('')}</ul>` : '<p class="quiet-empty">No active pairs. Your desk has been repaired.</p>'}</section>
+      <section class="pair-group" aria-labelledby="active-title"><div class="section-heading"><h2 id="active-title">Active <span>${active.length}</span></h2></div>${active.length ? `<ul class="pair-list">${active.map((pair) => `<li data-search-text="${escapeHtml(`${pair.wordA} ${pair.wordB} ${pair.contrast} ${pair.mnemonic}`.toLocaleLowerCase())}">${pairSummary(pair)}${attemptHistory(pair)}</li>`).join('')}</ul>` : '<p class="quiet-empty">No active pairs. Add a new pair when you confuse two words.</p>'}</section>
       <section class="pair-group" aria-labelledby="resolved-title"><div class="section-heading"><h2 id="resolved-title">Resolved <span>${resolved.length}</span></h2></div>${resolved.length ? `<ul class="pair-list">${resolved.map((pair) => `<li data-search-text="${escapeHtml(`${pair.wordA} ${pair.wordB} ${pair.contrast} ${pair.mnemonic}`.toLocaleLowerCase())}">${pairSummary(pair)}${attemptHistory(pair)}</li>`).join('')}</ul>` : '<p class="quiet-empty">Three clean delayed attempts move a pair here.</p>'}</section>
       <p class="search-empty" hidden>No pairs match that search.</p>` : renderEmptyState()}
   `;
@@ -344,10 +379,10 @@ function attemptHistory(pair: WordPair): string {
 function renderData(): string {
   const resolved = state.pairs.filter((pair) => pair.resolvedAt).length;
   const active = activePairs().length;
-  const verdictCopy = !storedToken() ? 'Free desk' : state.licenseChecking ? 'Checking license…' : isPro() ? 'Pro is active' : state.license?.reason === 'unreachable' ? 'Could not check while offline' : 'License is not active';
+  const verdictCopy = !storedToken() ? 'Free plan' : state.licenseChecking ? 'Checking license…' : isPro() ? 'Pro is active' : state.license?.reason === 'unreachable' ? 'Could not check while offline' : 'License is not active';
   return `
     <section class="page-heading data-heading">
-      <div><p class="eyebrow">Portable by design</p><h2>Own the work you put in.</h2><p>Back up everything, or take a clean CSV of resolved pairs into your next tool.</p></div>
+      <div><p class="eyebrow">Your data</p><h1>Export or restore your data</h1><p>Back up every record, or export resolved pairs as CSV.</p></div>
     </section>
     <div class="data-grid">
       <section class="data-panel" aria-labelledby="export-title">
@@ -366,11 +401,12 @@ function renderData(): string {
       <div class="price-stamp"><span>US$9</span><small>one time</small></div>
       <div>
         <p class="eyebrow">${escapeHtml(verdictCopy)}</p>
-        <h2 id="unlock-title">Keep the free desk, or remove its one limit.</h2>
+        <h2 id="unlock-title">Choose your active-pair limit</h2>
         <p>The free version holds eight active pairs at once—resolved pairs never count. Pro allows unlimited active pairs on this device. Practice, recordings, offline use, accessibility, and every export remain free.</p>
-        ${isPro() ? `<p class="license-good"><span aria-hidden="true">✓</span> Pro is active. You have ${active} active pair${active === 1 ? '' : 's'} with no cap.</p>` : `
-          <a class="button primary" href="${escapeHtml(CHECKOUT_URL)}">Buy Pro once</a>
-          <p class="microcopy">Secure hosted checkout by Sociobot/Dodo, the merchant of record. Refunds are handled there and revoke the license.</p>`}
+        ${isPro() ? `<p class="license-good"><span aria-hidden="true">✓</span> Pro is active. You have ${active} active pair${active === 1 ? '' : 's'} with no cap.</p>` : BILLING_AVAILABLE ? `
+          <a class="button primary" href="${escapeHtml(CHECKOUT_URL)}">Buy Pro for US$9</a>
+          <p class="microcopy">This is a one-time purchase through Sociobot/Dodo, the merchant of record. Refunds are handled there.</p>` : `
+          <p class="billing-status"><strong>US$9 one time.</strong> New checkout is pending billing registration. The free app and existing license restore still work.</p>`}
         <details class="restore-license" ${storedToken() && !isPro() ? 'open' : ''}>
           <summary>Have a license? Restore it here</summary>
           <form data-license-form><label for="license-token">License token</label><div class="answer-row"><input id="license-token" name="license" autocomplete="off" spellcheck="false" required /><button class="button secondary" type="submit">Verify license</button></div></form>
@@ -394,8 +430,8 @@ function renderDialog(): string {
   return `
     <dialog id="pair-dialog" aria-labelledby="dialog-title">
       <form class="pair-form" data-pair-form>
-        <div class="dialog-heading"><div><p class="eyebrow">One mix-up, clearly caught</p><h2 id="dialog-title">${editing ? 'Edit this confusion' : 'Log a confusion'}</h2></div><button class="icon-button" type="button" data-close-dialog aria-label="Close without saving">×</button></div>
-        <p class="form-intro">Both words matter. Add the shortest contrast that would have helped in the moment.</p>
+        <div class="dialog-heading"><div><p class="eyebrow">Confusion pair</p><h2 id="dialog-title">${editing ? 'Edit this pair' : 'Log a confusion pair'}</h2></div><button class="icon-button" type="button" data-close-dialog aria-label="Close without saving">×</button></div>
+        <p class="form-intro">Add both words and the shortest contrast that explains the difference.</p>
         <div class="word-fields">
           <div class="field"><label for="word-a">Word A <span aria-hidden="true">*</span></label><span class="field-help" id="word-a-help">The word you reached for</span><input id="word-a" name="wordA" value="${escapeHtml(fields.wordA)}" aria-describedby="word-a-help" required maxlength="80" autocomplete="off" /></div>
           <div class="not-equal" aria-hidden="true">≠</div>
@@ -410,7 +446,7 @@ function renderDialog(): string {
           <div class="recording-grid">${recordingControl('a', 'Word A', editing?.audioA)}${recordingControl('b', 'Word B', editing?.audioB)}</div>
         </fieldset>
         <p class="form-error" id="pair-form-error" role="alert"></p>
-        <div class="dialog-actions"><button class="button secondary" type="button" data-close-dialog>Cancel</button><button class="button primary" type="submit">${editing ? 'Save changes' : 'Add to repair desk'}</button></div>
+        <div class="dialog-actions"><button class="button secondary" type="button" data-close-dialog>Cancel</button><button class="button primary" type="submit">${editing ? 'Save changes' : 'Add to log'}</button></div>
       </form>
     </dialog>`;
 }
@@ -422,12 +458,27 @@ function recordingControl(side: WordSide, label: string, existing?: Blob): strin
 }
 
 function bindEvents(): void {
+  app.querySelectorAll<HTMLAnchorElement>('[data-view]').forEach((link) => link.addEventListener('click', (event) => {
+    event.preventDefault();
+    navigateTo(link.dataset.view as View);
+  }));
+  app.querySelector('[data-reset-demo]')?.addEventListener('click', () => void resetDemo());
+  app.querySelectorAll<HTMLAnchorElement>('[data-leave-demo]').forEach((link) => link.addEventListener('click', (event) => {
+    event.preventDefault();
+    void leaveDemo(link.href);
+  }));
   app.querySelectorAll<HTMLElement>('[data-add]').forEach((button) => button.addEventListener('click', openAddDialog));
   app.querySelectorAll<HTMLElement>('[data-edit]').forEach((button) => button.addEventListener('click', () => openEditDialog(button.dataset.edit!)));
   app.querySelectorAll<HTMLElement>('[data-delete]').forEach((button) => button.addEventListener('click', () => void removePair(button.dataset.delete!)));
   app.querySelectorAll<HTMLElement>('[data-close-dialog]').forEach((button) => button.addEventListener('click', closeDialog));
   app.querySelector<HTMLFormElement>('[data-pair-form]')?.addEventListener('submit', (event) => void submitPair(event));
-  app.querySelector<HTMLDialogElement>('#pair-dialog')?.addEventListener('close', () => { state.dialogOpen = false; });
+  app.querySelector<HTMLDialogElement>('#pair-dialog')?.addEventListener('close', () => {
+    if (!state.dialogOpen) return;
+    state.dialogOpen = false;
+    state.editingId = undefined;
+    render();
+    window.requestAnimationFrame(() => app.querySelector<HTMLElement>('[data-add]')?.focus());
+  });
   app.querySelectorAll<HTMLElement>('[data-record]').forEach((button) => button.addEventListener('click', () => void toggleRecording(button.dataset.record as WordSide)));
   app.querySelectorAll<HTMLElement>('[data-remove-audio]').forEach((button) => button.addEventListener('click', () => removeRecording(button.dataset.removeAudio as WordSide)));
   app.querySelector('[data-reveal]')?.addEventListener('click', () => { if (state.practice) state.practice.revealed = true; render(); });
@@ -446,10 +497,8 @@ function bindEvents(): void {
 
 function openAddDialog(): void {
   if (!isPro() && activePairs().length >= FREE_ACTIVE_LIMIT) {
-    state.view = 'data';
-    state.notice = `The free desk holds ${FREE_ACTIVE_LIMIT} active pairs. Resolve one or unlock unlimited pairs.`;
-    window.location.hash = 'data';
-    render();
+    state.notice = `The free plan holds ${FREE_ACTIVE_LIMIT} active pairs. Resolve one or activate Pro.`;
+    navigateTo('data');
     return;
   }
   draftAudio = {};
@@ -481,6 +530,7 @@ function closeDialog(): void {
   draftFields = undefined;
   removedAudio = new Set();
   render();
+  window.requestAnimationFrame(() => app.querySelector<HTMLElement>('[data-add]')?.focus());
 }
 
 async function submitPair(event: SubmitEvent): Promise<void> {
@@ -498,7 +548,7 @@ async function submitPair(event: SubmitEvent): Promise<void> {
   }
   const duplicate = state.pairs.find((pair) => pair.id !== state.editingId && samePair(pair, { wordA, wordB }));
   if (duplicate) {
-    error.textContent = `That pair is already on your desk as “${duplicate.wordA} / ${duplicate.wordB}”. Edit the existing pair instead.`;
+    error.textContent = `That pair is already in your log as “${duplicate.wordA} / ${duplicate.wordB}”. Edit the existing pair instead.`;
     return;
   }
   const editing = state.editingId ? state.pairs.find((pair) => pair.id === state.editingId) : undefined;
@@ -526,7 +576,7 @@ async function submitPair(event: SubmitEvent): Promise<void> {
     draftAudio = {};
     draftFields = undefined;
     removedAudio = new Set();
-    state.notice = editing ? 'Pair updated on this device.' : 'Confusion logged. Its first route is ready now.';
+    state.notice = editing ? 'Pair updated on this device.' : 'Confusion logged. Its first practice is ready now.';
     await loadData(false);
   } catch (reason) {
     error.textContent = reason instanceof Error ? reason.message : 'The pair could not be saved. Check local storage and try again.';
@@ -558,7 +608,7 @@ async function toggleRecording(side: WordSide): Promise<void> {
     return;
   }
   if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
-    if (status) status.textContent = 'Audio recording is not supported in this browser. You can still use the text route.';
+    if (status) status.textContent = 'Audio recording is not supported in this browser. You can still use text practice.';
     return;
   }
   try {
@@ -660,8 +710,8 @@ async function gradePractice(correct: boolean, response?: string): Promise<void>
 
 function nextPractice(): void {
   state.practice = undefined;
-  if (!duePairs().length) window.location.hash = 'desk';
-  render();
+  if (!duePairs().length) navigateTo('desk');
+  else render();
 }
 
 function download(name: string, blob: Blob): void {
@@ -740,6 +790,81 @@ function filterPairs(event: Event): void {
   if (empty) empty.hidden = shown !== 0;
 }
 
+function navigateTo(view: View, replace = false): void {
+  state.view = view;
+  state.practice = undefined;
+  const url = viewUrl(view);
+  if (replace) history.replaceState({ view }, '', url);
+  else history.pushState({ view }, '', url);
+  render();
+  window.requestAnimationFrame(focusRouteHeading);
+}
+
+function focusRouteHeading(): void {
+  const heading = document.querySelector<HTMLElement>('#main-content h1');
+  if (!heading) return;
+  heading.tabIndex = -1;
+  heading.focus();
+}
+
+async function sampleData(): Promise<{ pairs: WordPair[]; attempts: Attempt[] }> {
+  const now = Date.now();
+  const [audioA, audioB] = await Promise.all([
+    fetch('/assets/sample-affect.wav').then((response) => response.ok ? response.blob() : undefined).catch(() => undefined),
+    fetch('/assets/sample-effect.wav').then((response) => response.ok ? response.blob() : undefined).catch(() => undefined)
+  ]);
+  const pairs: WordPair[] = [
+    {
+      id: 'demo-affect-effect', wordA: 'affect', wordB: 'effect', language: 'English',
+      contrast: 'Affect is usually an action; effect is usually a result.', mnemonic: 'A for action.',
+      createdAt: now - 2 * DAY, updatedAt: now - DAY, dueAt: now - 60_000, cleanStreak: 0,
+      lastMode: 'text-audio', ...(audioA ? { audioA } : {}), ...(audioB ? { audioB } : {})
+    },
+    {
+      id: 'demo-desert-dessert', wordA: 'desert', wordB: 'dessert', language: 'English',
+      contrast: 'A desert is dry land; dessert is the sweet course after a meal.', mnemonic: 'Dessert has two s letters because I want seconds.',
+      createdAt: now - 6 * DAY, updatedAt: now - DAY, dueAt: now + DAY, cleanStreak: 1, lastMode: 'text-audio'
+    },
+    {
+      id: 'demo-embarazada-embarrassed', wordA: 'embarazada', wordB: 'embarrassed', language: 'Spanish and English',
+      contrast: 'Embarazada means pregnant in Spanish; embarrassed means ashamed in English.', mnemonic: 'The similar spelling hides a different meaning.',
+      createdAt: now - 16 * DAY, updatedAt: now - 2 * DAY, dueAt: now - 2 * DAY, cleanStreak: 3,
+      resolvedAt: now - 2 * DAY, lastMode: 'text-audio'
+    }
+  ];
+  const attempts: Attempt[] = [
+    { id: 'demo-attempt-1', pairId: 'demo-desert-dessert', mode: 'text-audio', target: 'b', correct: true, createdAt: now - DAY, scheduledDueAt: now - DAY },
+    { id: 'demo-attempt-2', pairId: 'demo-embarazada-embarrassed', mode: 'text-audio', target: 'b', correct: true, createdAt: now - 8 * DAY, scheduledDueAt: now - 8 * DAY },
+    { id: 'demo-attempt-3', pairId: 'demo-embarazada-embarrassed', mode: 'text-audio', target: 'a', correct: true, createdAt: now - 5 * DAY, scheduledDueAt: now - 5 * DAY },
+    { id: 'demo-attempt-4', pairId: 'demo-embarazada-embarrassed', mode: 'text-audio', target: 'b', correct: true, createdAt: now - 2 * DAY, scheduledDueAt: now - 2 * DAY }
+  ];
+  return { pairs, attempts };
+}
+
+async function seedDemo(force = false): Promise<void> {
+  if (!isDemo || (!force && localStorage.getItem(demoSeedKey) === '1')) return;
+  const sample = await sampleData();
+  await replaceAllData(sample.pairs, sample.attempts);
+  localStorage.setItem(demoSeedKey, '1');
+}
+
+async function resetDemo(): Promise<void> {
+  await seedDemo(true);
+  state.practice = undefined;
+  state.notice = 'Sample data reset.';
+  await loadData(false);
+}
+
+async function leaveDemo(destination: string): Promise<void> {
+  if (isDemo) {
+    await replaceAllData([], []);
+    localStorage.removeItem(demoSeedKey);
+    localStorage.removeItem('demo:sb_license:vocab-confusion-log');
+    localStorage.removeItem('demo:sb_license:vocab-confusion-log:verdict');
+  }
+  window.location.assign(destination);
+}
+
 async function loadData(showLoading = true): Promise<void> {
   if (showLoading) {
     state.loading = true;
@@ -747,6 +872,7 @@ async function loadData(showLoading = true): Promise<void> {
     render();
   }
   try {
+    await seedDemo();
     [state.pairs, state.attempts] = await Promise.all([getPairs(), getAttempts()]);
     state.loading = false;
     state.error = undefined;
@@ -771,12 +897,12 @@ async function initializeLicense(): Promise<void> {
 }
 
 function applyUpdate(): void {
+  updateRequested = true;
   serviceWorkerRegistration?.waiting?.postMessage({ type: 'SKIP_WAITING' });
 }
 
 async function registerServiceWorker(): Promise<void> {
   if (!('serviceWorker' in navigator) || !import.meta.env.PROD) return;
-  const hadController = Boolean(navigator.serviceWorker.controller);
   serviceWorkerRegistration = await navigator.serviceWorker.register('/sw.js');
   if (serviceWorkerRegistration.waiting) {
     state.updateReady = true;
@@ -791,14 +917,14 @@ async function registerServiceWorker(): Promise<void> {
       }
     });
   });
-  navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadController) window.location.reload(); });
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (updateRequested) window.location.reload(); });
 }
 
-window.addEventListener('hashchange', () => {
-  state.view = viewFromHash();
+window.addEventListener('popstate', () => {
+  state.view = viewFromPath();
   state.practice = undefined;
   render();
-  window.requestAnimationFrame(() => document.querySelector<HTMLElement>('#main-content')?.focus());
+  window.requestAnimationFrame(focusRouteHeading);
 });
 window.addEventListener('online', () => { state.online = true; render(); void initializeLicense(); });
 window.addEventListener('offline', () => { state.online = false; render(); });

@@ -1,0 +1,7 @@
+:root { color-scheme: light; background: #f3e8cf; color: #172c3a; font: 18px/1.55 system-ui, sans-serif; }
+body { min-height: 100vh; margin: 0; background: #f3e8cf; }
+main { max-width: 40rem; margin: 12vh auto; padding: 24px; }
+h1 { margin: 0 0 20px; font: 700 clamp(2.4rem, 8vw, 4.5rem)/1.08 Georgia, serif; }
+.label { color: #b83a32; font-size: 0.8rem; font-weight: 900; letter-spacing: 0.13em; text-transform: uppercase; }
+a { display: inline-flex; align-items: center; min-height: 44px; margin: 8px 20px 0 0; color: #175e8e; font-weight: 800; }
+:focus-visible { outline: 3px solid #175e8e; outline-offset: 3px; }

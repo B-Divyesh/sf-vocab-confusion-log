@@ -55,3 +55,7 @@ Final generation prompt (used verbatim):
 ## Asset provenance
 
 `public/assets/repair-collage.webp` is an original AI-generated bitmap created for this product on 2026-08-27 with the factory image deployment via `/opt/fleet/lib/gen-image.sh`. The exact prompt is above and in `assets/src/repair-collage.prompt.json`. It was visually reviewed for accidental text, logos, malformed symbols, and palette consistency, then converted locally to WebP. Product icons and UI marks are original authored SVG/CSS shapes. Generated imagery is disclosed in the footer.
+
+`public/assets/vocab-confusion-log-social.jpg` was composed on 2026-09-06 by center-cropping that same original collage to the required 1200 × 630 social-preview format. It introduces no new source material. `public/icons/apple-touch-icon.png` is a 180 px derivative of the authored product icon.
+
+The demo’s `sample-affect.wav` and `sample-effect.wav` were generated locally with eSpeak NG 1.51 on 2026-09-06. They contain only those two spoken sample words and are included to demonstrate the audio-to-text path without third-party requests.

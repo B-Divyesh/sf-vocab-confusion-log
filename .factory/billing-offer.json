@@ -1,0 +1,13 @@
+{
+  "slug": "vocab-confusion-log",
+  "name": "Vocab Confusion Log Pro",
+  "price_minor": 900,
+  "currency": "USD",
+  "price_type": "one_time_price",
+  "return_url": "https://vocab-confusion-log.sociobot.in/log/",
+  "price_evidence": "The existing public offer at https://vocab-confusion-log.sociobot.in/#data states US$9 one time; the billing checkout returned 404 pending registration on 2026-09-06.",
+  "paid_features": [
+    "Unlimited active confusion pairs after valid license verification"
+  ],
+  "license_validation_path": "/api/v1/products/vocab-confusion-log/verify"
+}
