@@ -105,6 +105,9 @@ test('@claim:offline-reload works offline after the first demo visit', async ({ 
     await page.getByRole('button', { name: 'Check spelling' }).click();
     await expect(page.getByText(/recording was effect/i)).toBeVisible();
     expect((await demoPair(page)).cleanStreak).toBe(1);
+    await page.goto(`/never-cached-${Date.now()}`, { waitUntil: 'domcontentloaded' });
+    await expect(page.getByRole('heading', { level: 1, name: 'This page is not cached' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Open the demo' })).toBeVisible();
   } finally {
     await context.close();
   }

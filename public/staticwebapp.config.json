@@ -16,15 +16,7 @@
   },
   "routes": [
     {
-      "route": "/log/practice",
-      "rewrite": "/log/index.html"
-    },
-    {
       "route": "/log/practice/",
-      "rewrite": "/log/index.html"
-    },
-    {
-      "route": "/log/pairs",
       "rewrite": "/log/index.html"
     },
     {
@@ -32,31 +24,15 @@
       "rewrite": "/log/index.html"
     },
     {
-      "route": "/log/data",
-      "rewrite": "/log/index.html"
-    },
-    {
       "route": "/log/data/",
       "rewrite": "/log/index.html"
-    },
-    {
-      "route": "/demo/practice",
-      "rewrite": "/demo/index.html"
     },
     {
       "route": "/demo/practice/",
       "rewrite": "/demo/index.html"
     },
     {
-      "route": "/demo/pairs",
-      "rewrite": "/demo/index.html"
-    },
-    {
       "route": "/demo/pairs/",
-      "rewrite": "/demo/index.html"
-    },
-    {
-      "route": "/demo/data",
       "rewrite": "/demo/index.html"
     },
     {

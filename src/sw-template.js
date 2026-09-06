@@ -31,7 +31,7 @@ self.addEventListener('fetch', (event) => {
 
   if (request.mode === 'navigate') {
     event.respondWith(
-      fetch(request)
+      (self.navigator.onLine ? fetch(request) : Promise.reject(new TypeError('Offline')))
         .then((response) => {
           const copy = response.clone();
           caches.open(CACHE).then((cache) => cache.put(request, copy));
@@ -39,8 +39,21 @@ self.addEventListener('fetch', (event) => {
         })
         .catch(async () => {
           const path = new URL(request.url).pathname;
-          const routeShell = path.startsWith('/demo/') ? '/demo/' : path.startsWith('/log/') ? '/log/' : '/index.html';
-          return (await caches.match(request, { ignoreVary: true })) || (await caches.match(routeShell, { ignoreVary: true })) || caches.match('/offline.html', { ignoreVary: true });
+          const appRoute = /^\/(demo|log)\/(?:practice|pairs|data)\/?$/.exec(path);
+          const routeShell = path === '/demo' || path === '/demo/' || appRoute?.[1] === 'demo'
+            ? '/demo/'
+            : path === '/log' || path === '/log/' || appRoute?.[1] === 'log'
+              ? '/log/'
+              : path === '/privacy' || path === '/privacy/'
+                ? '/privacy/'
+                : path === '/terms' || path === '/terms/'
+                  ? '/terms/'
+                  : path === '/' || path === '/index.html'
+                    ? '/index.html'
+                    : undefined;
+          return (await caches.match(request, { ignoreVary: true })) ||
+            (routeShell ? await caches.match(routeShell, { ignoreVary: true }) : undefined) ||
+            caches.match('/offline.html', { ignoreVary: true });
         })
     );
     return;

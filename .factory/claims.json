@@ -4,7 +4,7 @@
     "claim": "Works offline after the first visit",
     "where": "landing facts, app offline notice, README",
     "test": "npm run test:claims -- --grep @claim:offline-reload",
-    "sandbox": "fresh browser context at /demo/; activate the service worker, go offline, reload, complete the due sample, and assert its result is saved"
+    "sandbox": "fresh browser context at /demo/; activate the service worker, go offline, reload, save a practice result, and assert an uncached URL shows the offline fallback"
   },
   {
     "id": "recordings-local",
