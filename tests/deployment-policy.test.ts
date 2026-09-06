@@ -18,8 +18,12 @@ const routeHeaders = (path: string) => route(path)?.headers;
 describe('static deployment response policy', () => {
   it('ships an immutable one-year cache policy for fingerprinted build assets', () => {
     expect(routeHeaders('/assets/*')?.['Cache-Control']).toBe('public, max-age=31536000, immutable');
-    expect(route('/log/*')?.rewrite).toBe('/log/index.html');
-    expect(route('/demo/*')?.rewrite).toBe('/demo/index.html');
+    for (const base of ['log', 'demo']) {
+      for (const view of ['practice', 'pairs', 'data']) {
+        expect(route(`/${base}/${view}/`)?.rewrite).toBe(`/${base}/index.html`);
+      }
+      expect(route(`/${base}/*`)).toBeUndefined();
+    }
   });
 
   it('keeps update entry points revalidatable', () => {
@@ -36,6 +40,7 @@ describe('static deployment response policy', () => {
 
   it('serves unknown paths as a designed HTTP 404', () => {
     expect(config.responseOverrides['404']).toEqual({ rewrite: '/404.html', statusCode: 404 });
+    expect(config.routes.some((entry) => entry.route === '/log/*' || entry.route === '/demo/*')).toBe(false);
   });
 
   it('uses a preload-compatible HSTS duration', () => {

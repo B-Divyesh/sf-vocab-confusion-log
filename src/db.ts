@@ -140,7 +140,7 @@ function isAttempt(value: unknown): value is Attempt {
     typeof item.createdAt === 'number' && typeof item.scheduledDueAt === 'number';
 }
 
-export async function importBackup(value: unknown): Promise<{ pairs: number; attempts: number }> {
+export async function importBackup(value: unknown, activeLimit = Number.POSITIVE_INFINITY): Promise<{ pairs: number; attempts: number }> {
   if (!value || typeof value !== 'object') throw new Error('Choose a Vocab Confusion Log JSON backup.');
   const backup = value as Partial<Backup>;
   if (backup.format !== 'vocab-confusion-log' || backup.version !== 1 || !Array.isArray(backup.pairs) || !Array.isArray(backup.attempts)) {
@@ -162,6 +162,14 @@ export async function importBackup(value: unknown): Promise<{ pairs: number; att
     };
   });
   if (!backup.attempts.every(isAttempt)) throw new Error('An attempt in this backup is invalid.');
+
+  const existingPairs = await getPairs();
+  const mergedPairs = new Map(existingPairs.map((pair) => [pair.id, pair]));
+  for (const pair of pairs) mergedPairs.set(pair.id, pair);
+  const activeCount = [...mergedPairs.values()].filter((pair) => !pair.resolvedAt).length;
+  if (activeCount > activeLimit) {
+    throw new Error(`This restore would leave ${activeCount} active pairs. Free allows ${activeLimit}. Resolve or delete a pair, or restore Pro.`);
+  }
 
   const db = await openDatabase();
   const transaction = db.transaction(['pairs', 'attempts'], 'readwrite');

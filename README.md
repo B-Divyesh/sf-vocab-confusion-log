@@ -2,7 +2,7 @@
 
 Vocab Confusion Log is a local-first PWA for language learners who repeatedly confuse the same words. Log the pair, add one contrast cue, and optionally record your own pronunciation. The app switches between text → audio and audio → text practice when both recordings exist.
 
-A pair resolves after three clean scheduled attempts: immediately, one day later, and three days after that. A miss resets the clean run and returns in ten minutes. This is repair history, not a proficiency score.
+A pair resolves after three clean scheduled attempts: immediately, one day later, and three days after that. A miss resets the clean run and returns in ten minutes. This is practice history, not a proficiency score.
 
 Live product: <https://vocab-confusion-log.sociobot.in>
 
@@ -22,7 +22,7 @@ The Pro purchase uses Sociobot’s hosted billing and license verification API. 
 
 ## Run locally
 
-Requires Node.js 20 or newer.
+Requires Node.js 20.19 or newer.
 
 ```sh
 npm ci
@@ -44,6 +44,10 @@ npm audit --omit=dev
 ```
 
 `npm run build` type-checks the project and writes the static site to `dist/`. The browser suite checks the real workflow, routes, keyboard, mobile layout, metadata, 404, and accessibility. The claims suite runs every command declared in `.factory/claims.json` against `/demo/`.
+
+## Deploy
+
+Run `npm run build`, then publish the complete `dist/` directory to the product’s static host. Keep `staticwebapp.config.json` at the deployment root so known app routes, security headers, caching, and the HTTP 404 response remain active.
 
 ## Data and privacy
 

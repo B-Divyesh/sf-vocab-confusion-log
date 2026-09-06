@@ -80,6 +80,7 @@ h3 { font-size: 1.4rem; }
   display: flex;
   align-items: center;
   gap: 12px;
+  min-height: 44px;
   color: var(--ink);
   text-decoration: none;
 }
@@ -113,6 +114,14 @@ h3 { font-size: 1.4rem; }
   background: var(--tomato);
   color: #fff;
   font-size: 0.75rem;
+}
+.app-nav {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px max(20px, env(safe-area-inset-right)) 10px max(20px, env(safe-area-inset-left));
+  border-bottom: 1px solid var(--line);
+  background: rgb(255 249 235 / 0.72);
 }
 
 .offline-strip, .notice-strip {
@@ -148,7 +157,7 @@ h3 { font-size: 1.4rem; }
 
 main { min-height: 62vh; }
 #main-content:focus { outline: none; }
-.hero-grid, .queue-section, .method-note, .page-heading, .pair-group, .data-grid, .unlock-sheet, .practice-shell, .practice-empty, .result-sheet {
+.hero-grid, .demo-intro, .queue-section, .method-note, .page-heading, .pair-group, .data-grid, .unlock-sheet, .practice-shell, .practice-empty, .result-sheet {
   width: min(1160px, calc(100% - 48px));
   margin-inline: auto;
 }
@@ -160,6 +169,10 @@ main { min-height: 62vh; }
   padding-block: clamp(48px, 8vw, 96px) 40px;
 }
 .hero-copy h1 { max-width: 15ch; margin-bottom: 24px; }
+.demo-intro { padding-block: clamp(36px, 5vw, 56px) 20px; }
+.demo-intro h1 { max-width: none; margin-bottom: 20px; font-size: clamp(2.8rem, 5vw, 4rem); }
+.demo-intro .lede { max-width: 64ch; }
+.demo-intro + .queue-section { margin-bottom: 48px; }
 .eyebrow {
   margin-bottom: 12px;
   color: var(--tomato);
@@ -504,6 +517,16 @@ dialog::backdrop { background: rgb(23 44 58 / 0.78); }
 }
 .site-footer p { margin: 0; }
 .site-footer p:last-child { display: flex; flex-wrap: wrap; gap: 18px; }
+.site-footer a,
+.limits-section a,
+.legal-page a:not(.button-link),
+.legal-line a,
+.section-heading a {
+  display: inline-flex;
+  align-items: center;
+  min-width: 44px;
+  min-height: 44px;
+}
 .update-toast {
   position: fixed;
   z-index: 20;
@@ -556,10 +579,21 @@ dialog::backdrop { background: rgb(23 44 58 / 0.78); }
   .site-header { padding-inline: 16px; }
   .brand > span:last-child { font-size: 1.08rem; }
   .nav-link { padding-inline: 9px; }
+  .app-nav { justify-content: flex-start; overflow-x: auto; padding-inline: 16px; scrollbar-width: thin; }
   .demo-banner { align-items: flex-start; flex-direction: column; gap: 2px; padding: 12px 16px; }
   .demo-banner > div { width: 100%; justify-content: space-between; }
-  .hero-grid, .queue-section, .method-note, .page-heading, .pair-group, .data-grid, .unlock-sheet, .practice-shell, .practice-empty, .result-sheet, .landing-hero, .landing-preview, .landing-method, .limits-section, .price-section { width: min(100% - 32px, 1160px); }
+  .hero-grid, .demo-intro, .queue-section, .method-note, .page-heading, .pair-group, .data-grid, .unlock-sheet, .practice-shell, .practice-empty, .result-sheet, .landing-hero, .landing-preview, .landing-method, .limits-section, .price-section { width: min(100% - 32px, 1160px); }
   .hero-grid { gap: 42px; padding-block: 44px 34px; }
+  .demo-intro { padding-block: 32px 24px; }
+  .demo-intro h1 { max-width: none; margin-bottom: 12px; font-size: clamp(2.1rem, 10vw, 2.8rem); }
+  .demo-intro .lede { font-size: 1rem; }
+  .demo-intro .hero-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 16px; }
+  .demo-intro .hero-actions .button { width: auto; padding-inline: 8px; font-size: 0.9rem; }
+  .demo-intro + .queue-section { margin-bottom: 36px; }
+  .demo-intro + .queue-section .section-heading { align-items: center; flex-direction: row; margin-bottom: 10px; }
+  .demo-intro + .queue-section .section-heading .eyebrow { display: none; }
+  .demo-intro + .queue-section .section-heading h2 { font-size: 1.7rem; }
+  .demo-intro + .queue-section .pair-card { padding: 16px; }
   .hero-copy h1 { font-size: clamp(2.55rem, 13vw, 3.7rem); }
   .landing-hero { min-height: auto; gap: 54px; padding-block: 40px 64px; }
   .landing-hero h1 { font-size: clamp(2.7rem, 13vw, 3.8rem); }

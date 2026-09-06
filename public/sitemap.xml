@@ -2,7 +2,13 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://vocab-confusion-log.sociobot.in/</loc></url>
   <url><loc>https://vocab-confusion-log.sociobot.in/demo/</loc></url>
+  <url><loc>https://vocab-confusion-log.sociobot.in/demo/practice/</loc></url>
+  <url><loc>https://vocab-confusion-log.sociobot.in/demo/pairs/</loc></url>
+  <url><loc>https://vocab-confusion-log.sociobot.in/demo/data/</loc></url>
   <url><loc>https://vocab-confusion-log.sociobot.in/log/</loc></url>
+  <url><loc>https://vocab-confusion-log.sociobot.in/log/practice/</loc></url>
+  <url><loc>https://vocab-confusion-log.sociobot.in/log/pairs/</loc></url>
+  <url><loc>https://vocab-confusion-log.sociobot.in/log/data/</loc></url>
   <url><loc>https://vocab-confusion-log.sociobot.in/privacy/</loc></url>
   <url><loc>https://vocab-confusion-log.sociobot.in/terms/</loc></url>
 </urlset>

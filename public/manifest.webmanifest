@@ -2,7 +2,7 @@
   "id": "/",
   "name": "Vocab Confusion Log",
   "short_name": "Confusion Log",
-  "description": "Repair near-neighbor vocabulary mix-ups with alternating text and audio practice.",
+  "description": "Log confusing word pairs and practise them with text and audio.",
   "start_url": "/log/?source=pwa&v=2",
   "scope": "/",
   "display": "standalone",

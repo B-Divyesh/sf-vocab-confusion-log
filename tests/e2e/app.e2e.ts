@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import axeCore from 'axe-core';
 
 async function addPair(page: import('@playwright/test').Page, wordA: string, wordB: string): Promise<void> {
-  await page.getByRole('button', { name: 'Log a confusion pair' }).first().click();
+  await page.getByRole('button', { name: /(?:Log a confusion|Add sample) pair/ }).first().click();
   await page.getByLabel('Word A *').fill(wordA);
   await page.getByLabel('Word B *').fill(wordB);
   await page.getByLabel('Contrast cue *').fill(`${wordA} and ${wordB} are used in different contexts.`);
@@ -33,6 +33,7 @@ test('opens a populated demo in one click and resets it', async ({ page }) => {
   await page.getByRole('link', { name: 'Try it with sample data' }).click();
   await expect(page).toHaveURL(/\/demo\/$/);
   await expect(page.getByText('Demo — sample data, nothing is saved')).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Explore a sample confusion log' })).toBeVisible();
   await expect(page.getByText('affect', { exact: true })).toBeVisible();
   await expect(page.getByText('resolved', { exact: true })).toBeVisible();
   await addPair(page, 'principal', 'principle');
@@ -106,28 +107,55 @@ test('serves route metadata and crawlable internal links', async ({ page, reques
   const expectedTitles: Record<string, RegExp> = {
     '/': /Vocab Confusion Log — practise/,
     '/demo/': /Demo — Vocab Confusion Log/,
+    '/demo/practice/': /Practice — Vocab Confusion Log/,
+    '/demo/pairs/': /Pairs — Vocab Confusion Log/,
+    '/demo/data/': /Data — Vocab Confusion Log/,
     '/log/': /Log — Vocab Confusion Log/,
+    '/log/practice/': /Practice — Vocab Confusion Log/,
+    '/log/pairs/': /Pairs — Vocab Confusion Log/,
+    '/log/data/': /Data — Vocab Confusion Log/,
     '/privacy/': /Privacy — Vocab Confusion Log/,
-    '/terms/': /Terms — Vocab Confusion Log/
+    '/terms/': /Terms — Vocab Confusion Log/,
+    '/404.html': /Page not found — Vocab Confusion Log/
   };
   for (const [path, title] of Object.entries(expectedTitles)) {
     await page.goto(path);
     await expect(page).toHaveTitle(title);
-    await expect(page.locator('link[rel="canonical"]')).toHaveCount(1);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
+    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', `https://vocab-confusion-log.sociobot.in${path}`);
+    await expect(page.locator('meta[name="description"]')).toHaveAttribute('content', /\S/);
+    await expect(page.locator('meta[property="og:title"]')).toHaveAttribute('content', /\S/);
+    await expect(page.locator('meta[property="og:description"]')).toHaveAttribute('content', /\S/);
+    await expect(page.locator('meta[property="og:url"]')).toHaveAttribute('content', /^https:\/\/vocab-confusion-log\.sociobot\.in\//);
     await expect(page.locator('meta[property="og:image"]')).toHaveAttribute('content', /vocab-confusion-log-social\.jpg$/);
+    await expect(page.locator('meta[property="og:image:width"]')).toHaveAttribute('content', '1200');
+    await expect(page.locator('meta[property="og:image:height"]')).toHaveAttribute('content', '630');
+    await expect(page.locator('meta[property="og:image:alt"]')).toHaveAttribute('content', /\S/);
+    await expect(page.locator('meta[name="twitter:title"]')).toHaveAttribute('content', /\S/);
+    await expect(page.locator('meta[name="twitter:description"]')).toHaveAttribute('content', /\S/);
+    await expect(page.locator('meta[name="twitter:image"]')).toHaveAttribute('content', /vocab-confusion-log-social\.jpg$/);
+    await expect(page.locator('meta[name="twitter:image:alt"]')).toHaveAttribute('content', /\S/);
     await expect(page.locator('link[rel="apple-touch-icon"]')).toHaveCount(1);
+    expect(await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link').allTextContents()).toEqual(['Demo', 'My log', 'Privacy']);
+    const descriptionLength = await page.locator('meta[name="description"]').getAttribute('content').then((value) => value?.length ?? 0);
+    expect(descriptionLength).toBeLessThanOrEqual(155);
   }
-  for (const path of ['/demo/', '/log/', '/privacy/', '/terms/', '/assets/vocab-confusion-log-social.jpg', '/icons/apple-touch-icon.png']) {
+  const routes = ['/', '/demo/', '/demo/practice/', '/demo/pairs/', '/demo/data/', '/log/', '/log/practice/', '/log/pairs/', '/log/data/', '/privacy/', '/terms/'];
+  for (const path of [...routes, '/assets/vocab-confusion-log-social.jpg', '/icons/apple-touch-icon.png']) {
     expect((await request.get(path)).status(), path).toBe(200);
   }
+  const sitemap = await (await request.get('/sitemap.xml')).text();
+  for (const path of routes) expect(sitemap).toContain(`<loc>https://vocab-confusion-log.sociobot.in${path}</loc>`);
 });
 
 test('returns a designed 404 for an unknown path', async ({ page }) => {
-  const response = await page.goto('/no-such-route');
-  expect(response?.status()).toBe(404);
-  await expect(page).toHaveTitle('Page not found — Vocab Confusion Log');
-  await expect(page.getByRole('heading', { level: 1, name: 'This page does not exist' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Return home' })).toBeVisible();
+  for (const path of ['/no-such-route', '/log/not-a-real-route', '/demo/not-a-real-route']) {
+    const response = await page.goto(path);
+    expect(response?.status(), path).toBe(404);
+    await expect(page).toHaveTitle('Page not found — Vocab Confusion Log');
+    await expect(page.getByRole('heading', { level: 1, name: 'This page does not exist' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Return home' })).toBeVisible();
+  }
 });
 
 test('fits the phone viewport without hiding the first action', async ({ page }) => {
@@ -138,6 +166,25 @@ test('fits the phone viewport without hiding the first action', async ({ page })
   await page.goto('/demo/');
   await expect(page.getByText('Demo — sample data, nothing is saved')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Reset demo' })).toBeVisible();
+  const samplePair = await page.getByText('affect', { exact: true }).boundingBox();
+  expect(samplePair).not.toBeNull();
+  expect(samplePair!.y + samplePair!.height).toBeLessThanOrEqual(page.viewportSize()!.height);
+
+  for (const path of ['/', '/demo/', '/demo/data/', '/privacy/', '/terms/', '/404.html']) {
+    await page.goto(path);
+    const undersized = await page.locator('a[href], button, summary').evaluateAll((elements) => elements
+      .filter((element) => {
+        const style = getComputedStyle(element);
+        const box = element.getBoundingClientRect();
+        return style.visibility !== 'hidden' && style.display !== 'none' && box.width > 0 && box.height > 0;
+      })
+      .map((element) => {
+        const box = element.getBoundingClientRect();
+        return { label: element.textContent?.trim(), width: box.width, height: box.height };
+      })
+      .filter((box) => box.width < 44 || box.height < 44));
+    expect(undersized, `${path} has undersized touch targets`).toEqual([]);
+  }
 });
 
 test('handles invalid input, import errors, deletion cancel, and dialog focus', async ({ page }) => {
@@ -145,7 +192,18 @@ test('handles invalid input, import errors, deletion cancel, and dialog focus', 
   const addButton = page.getByRole('button', { name: 'Log a confusion pair' }).first();
   await addButton.click();
   await expect(page.getByLabel('Word A *')).toBeFocused();
+  await page.getByLabel('Word A *').fill('   ');
+  await page.getByLabel('Word B *').fill('effect');
+  await page.getByLabel('Contrast cue *').fill('   ');
+  await page.getByRole('button', { name: 'Add to log' }).click();
+  await expect(page.getByText('Enter Word A. Spaces alone do not count.')).toBeVisible();
+  await expect(page.getByLabel('Word A *')).toHaveAttribute('aria-invalid', 'true');
+  await expect(page.getByLabel('Word A *')).toBeFocused();
   await page.getByLabel('Word A *').fill('affect');
+  await page.getByRole('button', { name: 'Add to log' }).click();
+  await expect(page.getByText('Add a contrast cue. Spaces alone do not count.')).toBeVisible();
+  await expect(page.getByLabel('Contrast cue *')).toHaveAttribute('aria-invalid', 'true');
+  await expect(page.getByLabel('Contrast cue *')).toBeFocused();
   await page.getByLabel('Word B *').fill('AFFECT');
   await page.getByLabel('Contrast cue *').fill('These entries are equal after case normalization.');
   await page.getByRole('button', { name: 'Add to log' }).click();

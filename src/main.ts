@@ -19,6 +19,7 @@ type View = 'desk' | 'practice' | 'pairs' | 'data';
 
 const isDemo = window.location.pathname === '/demo' || window.location.pathname.startsWith('/demo/');
 const routeBase = isDemo ? '/demo' : '/log';
+const productOrigin = 'https://vocab-confusion-log.sociobot.in';
 const demoSeedKey = 'demo:vocab-confusion-log:seeded';
 setDatabaseName(isDemo ? 'demo:vocab-confusion-log' : 'vocab-confusion-log');
 setLicenseStoragePrefix(isDemo ? 'demo:' : '');
@@ -97,7 +98,7 @@ function viewTitle(view: View): string {
 
 function updateRouteMetadata(): void {
   const title = viewTitle(state.view);
-  const absoluteUrl = `${window.location.origin}${viewUrl(state.view)}`;
+  const absoluteUrl = `${productOrigin}${viewUrl(state.view)}`;
   document.title = title;
   document.querySelector<HTMLLinkElement>('link[rel="canonical"]')?.setAttribute('href', absoluteUrl);
   document.querySelector<HTMLMetaElement>('meta[property="og:title"]')?.setAttribute('content', title);
@@ -152,12 +153,17 @@ function render(): void {
         <span>Vocab Confusion Log</span>
       </a>
       <nav aria-label="Main navigation">
-        ${navLink('desk', 'Log')}
-        ${navLink('practice', 'Practice', due)}
-        ${navLink('pairs', 'Pairs')}
-        ${navLink('data', isPro() ? 'Data · Pro' : 'Data')}
+        <a class="nav-link${isDemo ? ' is-active' : ''}" href="/demo/" ${isDemo ? 'aria-current="page"' : ''}>Demo</a>
+        <a class="nav-link${isDemo ? '' : ' is-active'}" href="/log/" ${isDemo ? 'data-leave-demo' : 'aria-current="page"'}>My log</a>
+        <a class="nav-link" href="/privacy/" ${isDemo ? 'data-leave-demo' : ''}>Privacy</a>
       </nav>
     </header>
+    <nav class="app-nav" aria-label="Log sections">
+      ${navLink('desk', 'Log')}
+      ${navLink('practice', 'Practice', due)}
+      ${navLink('pairs', 'Pairs')}
+      ${navLink('data', isPro() ? 'Data · Pro' : 'Data')}
+    </nav>
     <div class="sr-only" role="status" aria-live="polite">${escapeHtml(viewTitle(state.view))}</div>
     ${!state.online ? '<div class="offline-strip" role="status"><span aria-hidden="true">●</span> Offline — logging, recordings, and practice still work here.</div>' : ''}
     ${state.notice ? `<div class="notice-strip" role="status">${escapeHtml(state.notice)}<button class="icon-button" data-dismiss-notice aria-label="Dismiss notice">×</button></div>` : ''}
@@ -191,7 +197,16 @@ function renderDesk(): string {
   const resolved = state.pairs.filter((pair) => pair.resolvedAt);
   const due = duePairs();
   const canAdd = isPro() || active.length < FREE_ACTIVE_LIMIT;
-  return `
+  const intro = isDemo ? `
+    <section class="demo-intro" aria-labelledby="desk-title">
+      <p class="eyebrow">Three sample confusion pairs</p>
+      <h1 id="desk-title">Explore a sample confusion log</h1>
+      <p class="lede">Practise <em>affect / effect</em>, or inspect the saved cues and history.</p>
+      <div class="hero-actions">
+        <a class="button primary" href="${viewUrl('practice')}" data-view="practice">Practise sample</a>
+        <button class="button secondary" data-add>${canAdd ? 'Add sample pair' : 'Unlock more pairs'}</button>
+      </div>
+    </section>` : `
     <section class="hero-grid" aria-labelledby="desk-title">
       <div class="hero-copy">
         <p class="eyebrow">Focused practice for repeated word mix-ups</p>
@@ -207,13 +222,16 @@ function renderDesk(): string {
         <img src="/assets/repair-collage.webp" alt="Two blank paper cards loop between a listening ear and a speaking mouth" width="1200" height="800" decoding="async" fetchpriority="high" />
         <figcaption>Text and audio practice for one confusing pair.</figcaption>
       </figure>
-    </section>
-    <section class="status-ledger" aria-label="Repair status">
+    </section>`;
+  return `
+    ${intro}
+    ${isDemo ? renderDeskQueue(due, active) : ''}
+    <section class="status-ledger" aria-label="Practice status">
       <div><strong>${due.length}</strong><span>due now</span></div>
       <div><strong>${active.length}</strong><span>active pairs</span></div>
       <div><strong>${resolved.length}</strong><span>resolved</span></div>
     </section>
-    ${state.pairs.length === 0 ? renderEmptyState() : renderDeskQueue(due, active)}
+    ${isDemo ? '' : state.pairs.length === 0 ? renderEmptyState() : renderDeskQueue(due, active)}
     <section class="method-note" aria-labelledby="method-title">
       <p class="eyebrow">How practice works</p>
       <h2 id="method-title">Complete three delayed attempts</h2>
@@ -393,6 +411,7 @@ function renderData(): string {
       <section class="data-panel" aria-labelledby="import-title">
         <span class="panel-number">02</span><h2 id="import-title">Restore</h2>
         <p>Import a JSON backup from this app. Matching record IDs are updated; other pairs stay in place.</p>
+        <p>Free restores allow up to eight active pairs. Resolved pairs do not count.</p>
         <label class="file-button">Choose JSON backup<input type="file" data-import accept="application/json,.json" /></label>
         <p class="field-status" id="import-status" aria-live="polite"></p>
       </section>
@@ -431,13 +450,13 @@ function renderDialog(): string {
     <dialog id="pair-dialog" aria-labelledby="dialog-title">
       <form class="pair-form" data-pair-form>
         <div class="dialog-heading"><div><p class="eyebrow">Confusion pair</p><h2 id="dialog-title">${editing ? 'Edit this pair' : 'Log a confusion pair'}</h2></div><button class="icon-button" type="button" data-close-dialog aria-label="Close without saving">×</button></div>
-        <p class="form-intro">Add both words and the shortest contrast that explains the difference.</p>
+        <p class="form-intro">Add both words and the shortest contrast that explains the difference. Word A, Word B, and Contrast cue are required.</p>
         <div class="word-fields">
-          <div class="field"><label for="word-a">Word A <span aria-hidden="true">*</span></label><span class="field-help" id="word-a-help">The word you reached for</span><input id="word-a" name="wordA" value="${escapeHtml(fields.wordA)}" aria-describedby="word-a-help" required maxlength="80" autocomplete="off" /></div>
+          <div class="field"><label for="word-a">Word A <span aria-hidden="true">*</span></label><span class="field-help" id="word-a-help">The word you reached for</span><input id="word-a" name="wordA" value="${escapeHtml(fields.wordA)}" aria-describedby="word-a-help pair-form-error" required maxlength="80" autocomplete="off" /></div>
           <div class="not-equal" aria-hidden="true">≠</div>
-          <div class="field"><label for="word-b">Word B <span aria-hidden="true">*</span></label><span class="field-help" id="word-b-help">The word you meant</span><input id="word-b" name="wordB" value="${escapeHtml(fields.wordB)}" aria-describedby="word-b-help" required maxlength="80" autocomplete="off" /></div>
+          <div class="field"><label for="word-b">Word B <span aria-hidden="true">*</span></label><span class="field-help" id="word-b-help">The word you meant</span><input id="word-b" name="wordB" value="${escapeHtml(fields.wordB)}" aria-describedby="word-b-help pair-form-error" required maxlength="80" autocomplete="off" /></div>
         </div>
-        <div class="field"><label for="contrast">Contrast cue <span aria-hidden="true">*</span></label><span class="field-help" id="contrast-help">One plain sentence: when does each word belong?</span><textarea id="contrast" name="contrast" aria-describedby="contrast-help" required maxlength="300" rows="3">${escapeHtml(fields.contrast)}</textarea></div>
+        <div class="field"><label for="contrast">Contrast cue <span aria-hidden="true">*</span></label><span class="field-help" id="contrast-help">One plain sentence: when does each word belong?</span><textarea id="contrast" name="contrast" aria-describedby="contrast-help pair-form-error" required maxlength="300" rows="3">${escapeHtml(fields.contrast)}</textarea></div>
         <div class="split-fields">
           <div class="field"><label for="mnemonic">Your mnemonic <span class="optional">Optional</span></label><input id="mnemonic" name="mnemonic" value="${escapeHtml(fields.mnemonic)}" maxlength="160" /></div>
           <div class="field"><label for="language">Language <span class="optional">Optional</span></label><input id="language" name="language" value="${escapeHtml(fields.language)}" maxlength="50" placeholder="e.g. English" /></div>
@@ -541,14 +560,31 @@ async function submitPair(event: SubmitEvent): Promise<void> {
   const wordA = String(data.get('wordA') ?? '').trim();
   const wordB = String(data.get('wordB') ?? '').trim();
   const contrast = String(data.get('contrast') ?? '').trim();
+  form.querySelectorAll('[aria-invalid="true"]').forEach((field) => field.removeAttribute('aria-invalid'));
+  const rejectBlank = (selector: '#word-a' | '#word-b' | '#contrast', message: string): boolean => {
+    const field = form.querySelector<HTMLInputElement | HTMLTextAreaElement>(selector);
+    error.textContent = message;
+    field?.setAttribute('aria-invalid', 'true');
+    field?.focus();
+    return true;
+  };
+  if (!wordA) return void rejectBlank('#word-a', 'Enter Word A. Spaces alone do not count.');
+  if (!wordB) return void rejectBlank('#word-b', 'Enter Word B. Spaces alone do not count.');
+  if (!contrast) return void rejectBlank('#contrast', 'Add a contrast cue. Spaces alone do not count.');
   if (normalizeAnswer(wordA) === normalizeAnswer(wordB)) {
     error.textContent = 'The two words need to be different. Check the spelling and try again.';
-    form.querySelector<HTMLInputElement>('#word-b')?.focus();
+    const field = form.querySelector<HTMLInputElement>('#word-b');
+    field?.setAttribute('aria-invalid', 'true');
+    field?.focus();
     return;
   }
   const duplicate = state.pairs.find((pair) => pair.id !== state.editingId && samePair(pair, { wordA, wordB }));
   if (duplicate) {
     error.textContent = `That pair is already in your log as “${duplicate.wordA} / ${duplicate.wordB}”. Edit the existing pair instead.`;
+    const field = form.querySelector<HTMLInputElement>('#word-a');
+    field?.setAttribute('aria-invalid', 'true');
+    form.querySelector<HTMLInputElement>('#word-b')?.setAttribute('aria-invalid', 'true');
+    field?.focus();
     return;
   }
   const editing = state.editingId ? state.pairs.find((pair) => pair.id === state.editingId) : undefined;
@@ -755,12 +791,13 @@ async function restoreBackup(event: Event): Promise<void> {
       input.value = '';
       return;
     }
-    const counts = await importBackup(parsed);
+    const counts = await importBackup(parsed, isPro() ? Number.POSITIVE_INFINITY : FREE_ACTIVE_LIMIT);
     status.textContent = `Restored ${counts.pairs} pairs and ${counts.attempts} attempts.`;
     state.notice = 'Backup restored into this device.';
     await loadData(false);
   } catch (reason) {
     status.textContent = reason instanceof Error ? reason.message : 'That file could not be imported.';
+    input.value = '';
   }
 }
 
@@ -850,6 +887,10 @@ async function seedDemo(force = false): Promise<void> {
 
 async function resetDemo(): Promise<void> {
   await seedDemo(true);
+  localStorage.removeItem('demo:sb_license:vocab-confusion-log');
+  localStorage.removeItem('demo:sb_license:vocab-confusion-log:verdict');
+  state.license = null;
+  state.licenseChecking = false;
   state.practice = undefined;
   state.notice = 'Sample data reset.';
   await loadData(false);
